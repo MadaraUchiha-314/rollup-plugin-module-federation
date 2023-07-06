@@ -1,0 +1,23 @@
+{
+  "name": "rollup-plugin-module-federation",
+  "version": "0.0.1",
+  "description": "A rollup plugin for module federation",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MadaraUchiha-314/rollup-plugin-module-federation.git"
+  },
+  "keywords": [
+    "rollup-plugin"
+  ],
+  "author": "Rohith R",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/issues"
+  },
+  "homepage": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation#readme"
+}

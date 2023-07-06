@@ -1,0 +1,21 @@
+{
+  "name": "project-a",
+  "version": "0.0.1",
+  "description": "A sample project-a to test rollup-federation",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup --config rollup.config.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Rohith R",
+  "license": "MIT",
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "uuid": "9.0.0"
+  },
+  "devDependencies": {
+    "rollup": "3.23.0"
+  }
+}
