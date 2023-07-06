@@ -19,5 +19,9 @@
   "bugs": {
     "url": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/issues"
   },
-  "homepage": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation#readme"
+  "homepage": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation#readme",
+  "dependencies": {
+    "estree-walker": "^3.0.3",
+    "magic-string": "^0.30.1"
+  }
 }
