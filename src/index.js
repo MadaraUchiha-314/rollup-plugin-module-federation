@@ -4,30 +4,60 @@ import MagicString from 'magic-string';
 export default function federation() {
     return {
         name: 'rollup-plugin-federation',
-        resolveId(source, importer, options) {
-            console.log(`resolveId: source = ${source} importer = ${importer} options = ${JSON.stringify(options, null, 2)}`)
-            return null
-        },
-        load(id) {
-            console.log(`load: id = ${id}`)
-        },
+        resolveId(source, importer, options) {},
+        load(id) {},
         transform(code, id) {
-            console.log(`transform: code = ${code} id = ${id}`)
-            
             const ast = this.parse(code)
-
             const magicString = new MagicString(code)
-
             walk(ast, {
                 enter(node) {
                     console.log("entering node: ", node);
                     if (node.type === 'ImportDeclaration') {
                         /**
-                         * TODO: This writes only the R.H.S. of the import.
-                         * Writing the L.H.S. of the import is going to be more involved.
-                         * Needs an understanding of ImportDefaultSpecifier, ImportSpecifier and how to handle these statements.
+                         * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
+                         * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
                          */
-                        magicString.overwrite(node.start, node.end, `__federated__import__('${node.source.value}')`)
+                        const federatedImportStms = [];
+                        /**
+                         * TODO: Convert this to a federated import.
+                         */
+                        const moduleSpecifier = `import('${node.source.value}')`;
+                        node.specifiers.map((specifier) => {
+                            switch(specifier.type) {
+                                case 'ImportDefaultSpecifier': {
+                                    /**
+                                     * import ABC from 'pqr';
+                                     */
+                                    federatedImportStms.push(
+                                        `const ${specifier.local.name} = await ${moduleSpecifier}`
+                                    )
+                                    break
+                                }
+                                case 'ImportNamespaceSpecifier': {
+                                    federatedImportStms.push(
+                                        `const ${specifier.local.name} = await ${moduleSpecifier}`
+                                    )
+                                    break
+                                }
+                                case 'ImportSpecifier': {
+                                    if (specifier.imported.name !== specifier.local.name) {
+                                        federatedImportStms.push(
+                                            `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
+                                        )
+                                    } else {
+                                        federatedImportStms.push(
+                                            `const { ${specifier.local.name} } = await ${moduleSpecifier}`
+                                        )
+                                    }
+                                    break
+                                }
+                                default:
+                                    throw Error(`Unhandled ImportDeclaration specifiers. ${JSON.stringify(specifier)}`)
+                            }
+                        });
+                        const federatedImportStmsStr = federatedImportStms.join(';').concat(';');
+                        console.log(federatedImportStmsStr);
+                        magicString.overwrite(node.start, node.end, federatedImportStmsStr)
                     }
                 }
             })

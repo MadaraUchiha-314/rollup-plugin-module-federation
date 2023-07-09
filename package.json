@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation#readme",
   "dependencies": {
+    "@types/estree": "^1.0.1",
     "estree-walker": "^3.0.3",
     "magic-string": "^0.30.1"
   }
