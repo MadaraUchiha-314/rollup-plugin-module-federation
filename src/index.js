@@ -4,35 +4,90 @@ import MagicString from 'magic-string';
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
   'ImportExpression': 'ImportExpression'
-};   
+};
+
+const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
+const REMOTE_ENTRY_FILE_NAME = 'remoteEntry.js';
+const REMOTE_ENTRY_NAME = 'remoteEntry';
 
 export default function federation(federationConfig) {
+  const {
+    name,
+    fileName,
+    exposes,
+    shared,
+  } = federationConfig;
   return {
     name: 'rollup-plugin-federation',
-    options(options) {
-      /**
-       * TODO: Add a new virtual entry point with the init() and get() interface.
-       */
+    options(options) {},
+    buildStart(options) {
+      this.emitFile({
+        type: 'chunk',
+        id: REMOTE_ENTRY_MODULE_ID,
+        name: name ?? REMOTE_ENTRY_NAME,
+        fileName: fileName ?? REMOTE_ENTRY_FILE_NAME,
+        importer: null,
+      });
     },
-    buildStart(options) {},
-    resolveId(source, importer, options) {},
-    load(id) {},
+    resolveId(source, importer, options) {
+      if (source === REMOTE_ENTRY_MODULE_ID) {
+        return REMOTE_ENTRY_MODULE_ID;
+      }
+      return null;
+    },
+    load(id) {
+      if (id === REMOTE_ENTRY_MODULE_ID) {
+        const remoteEntryCode = `
+          const init = (sharedScope) => {
+            ${
+              Object.entries(shared).map(([key, sharedModule]) => {
+                const { 
+                  eager, packageName, requiredVersion, shareKey, shareScope, singleton, strictVersion, version,
+                } = sharedModule;
+                const importedModule = sharedModule.import ?? key;
+                return `
+                  sharedScope['${shareKey ?? key}']['${version}'] = {
+                    get: () => import('${importedModule}').then((module) => module),
+                  };
+                `;
+              }).join('')
+            }
+          };
+          const get = (module) => {
+            switch(module) {
+              ${
+                Object.entries(exposes).map(([key, exposedModule]) => {
+                  return `
+                    case '${key}': {
+                      return import('${exposedModule}');
+                    }
+                  `;
+                }).join('')
+              }
+            }
+          };
+          export { init, get };
+        `;
+        return remoteEntryCode;
+      }
+      return null;
+    },
     transform(code, id) {
       const ast = this.parse(code);
       const magicString = new MagicString(code);
       walk(ast, {
         enter(node) {
           /**
+           * TODO: What all types of nodes need to handled here ?
+           * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
+           * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
+           */
+          /**
            * TODO: Check if we are statically importing any local files that are shared or exposed.
            * We need to generate a separate chunk for those files.
            * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
            * We convert those imorts into dynamic imports.
            * What about eager ? Don't know. TBD.
-           */
-          /**
-           * TODO: What all types of nodes need to handled here ?
-           * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
-           * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
            */
           if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
           }
@@ -53,7 +108,7 @@ export default function federation(federationConfig) {
         const magicString = new MagicString(chunkInfo.code);
         walk(ast, {
           enter(node) {
-            console.log("Entering node: ", node);
+            // console.debug("Entering node: ", node);
             /**
              * TODO: Only modify the import if we are either sharing or exposing it using module federation.
              */
@@ -114,7 +169,7 @@ export default function federation(federationConfig) {
                   break;
                 }
               } 
-              const federatedImportStmsStr = federatedImportStms.join(';').concat(';');
+              const federatedImportStmsStr = federatedImportStms.join(';');
               magicString.overwrite(node.start, node.end, federatedImportStmsStr);
             }
           }
