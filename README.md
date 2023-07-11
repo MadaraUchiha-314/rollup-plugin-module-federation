@@ -9,6 +9,6 @@ npm install
 ### Building `project-a`
 ```sh
 cd examples/project-a
-npm isntall
+npm install
 npm run build
 ```
