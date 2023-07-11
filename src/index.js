@@ -56,7 +56,6 @@ export default function federation() {
                             }
                         });
                         const federatedImportStmsStr = federatedImportStms.join(';').concat(';');
-                        console.log(federatedImportStmsStr);
                         magicString.overwrite(node.start, node.end, federatedImportStmsStr)
                     }
                 }
