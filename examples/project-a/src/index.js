@@ -7,9 +7,12 @@ export async function doSomething() {
   console.log(React.version);
   console.log(typeof Component);
   const ReactDOM = await import('react-dom');
+  
   console.log(ReactDOM.version);
   console.log(uuidv4());
   console.log(ABC);
+  const { PQR } = await import('./pqr');
+  console.log(PQR);
 }
 
 doSomething();
