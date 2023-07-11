@@ -13,7 +13,7 @@ const REMOTE_ENTRY_NAME = 'remoteEntry';
 export default function federation(federationConfig) {
   const {
     name,
-    fileName,
+    filename,
     exposes,
     shared,
   } = federationConfig;
@@ -21,35 +21,61 @@ export default function federation(federationConfig) {
     name: 'rollup-plugin-federation',
     options(options) {},
     buildStart(options) {
+      /**
+       * Emit a file corresponding to the remote container.
+       * This plugin will itself resolve this file in resolveId() and provide the implementation of the file in load()
+       */
       this.emitFile({
         type: 'chunk',
         id: REMOTE_ENTRY_MODULE_ID,
         name: name ?? REMOTE_ENTRY_NAME,
-        fileName: fileName ?? REMOTE_ENTRY_FILE_NAME,
+        fileName: filename ?? REMOTE_ENTRY_FILE_NAME,
         importer: null,
       });
     },
     resolveId(source, importer, options) {
+      /**
+       * Resolve the virtual file for the remote entry manually.
+       * Rest of the files are resolved natively by the default resolvers/
+       */
       if (source === REMOTE_ENTRY_MODULE_ID) {
         return REMOTE_ENTRY_MODULE_ID;
       }
       return null;
     },
     load(id) {
+      /**
+       * Provide the code for the remote entry.
+       */
       if (id === REMOTE_ENTRY_MODULE_ID) {
+        /**
+         * The basic idea is to provide two functions init() and get() which are compliant with the module federation spec.
+         * We create this remote entry manually.
+         * init(): Populate the shared scope object.
+         * get(): Resolve the module which is requested.
+         */
         const remoteEntryCode = `
           const init = (sharedScope) => {
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
+                /**
+                 * TODO: Get the default values of these from the nearest package.json
+                 */
                 const { 
                   eager, packageName, requiredVersion, shareKey, shareScope, singleton, strictVersion, version,
                 } = sharedModule;
+                /**
+                 * Handle import false.
+                 */
                 const importedModule = sharedModule.import ?? key;
-                return `
+                /**
+                 * TODO: Add versioning information.
+                 */
+                return importedModule ? `
                   sharedScope['${shareKey ?? key}']['${version}'] = {
                     get: () => import('${importedModule}').then((module) => module),
                   };
-                `;
+                `: '';
               }).join('')
             }
           };
@@ -120,6 +146,7 @@ export default function federation(federationConfig) {
               const federatedImportStms = [];
               /**
                * TODO: What all information do we need to pass to this function ??
+               * TODO: Implement ___federatedImport___ function.
                */
               const moduleSpecifier = `__federatedImport__('${node.source.value}')`;
               switch(node.type) {
