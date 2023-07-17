@@ -2,7 +2,7 @@ export function getModulePathFromResolvedId(id) {
     return id.split('?')[0];
 }
 
-export function getCleanModuleName(name) {
+export function sanitizeModuleName(name) {
     return name.replace(/\.|\//g, '_');
 }
 

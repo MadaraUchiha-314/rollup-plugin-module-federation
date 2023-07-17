@@ -1,6 +1,6 @@
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
-import { getModulePathFromResolvedId, getCleanModuleName, getChunkNameForModule } from './utils.js';
+import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule } from './utils.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
@@ -28,7 +28,7 @@ export default function federation(federationConfig) {
   } = federationConfig;
 
   /**
-   * Created a mapping between resolvedId of the module to the module name (shared, exposed)
+   * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
   const moduleIdToName = {};
   /**
@@ -43,30 +43,33 @@ export default function federation(federationConfig) {
       /**
        * For each shared and exposed module we store the resolved paths for those modules.
        */
-      for (const [sharedModule, sharedModuleHints] of Object.entries(shared)) {
-        const resolvedId = await this.resolve(sharedModule);
+      const federatedModules = [];
+      /**
+       * Shared modules.
+       */
+      federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
+        specifiedModulePath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
+        type: 'shared',
+      })));
+      /**
+       * Exposed modules.
+       */
+      federatedModules.push(...Object.entries(exposes).map(([exposedModuleName, exposedModulePath]) => ({
+        specifiedModulePath: exposedModulePath,
+        type: 'exposed',
+      })));
+      for (const { specifiedModulePath, type } of federatedModules) {
+        const resolvedId = await this.resolve(specifiedModulePath);
         const modulePath = getModulePathFromResolvedId(resolvedId.id);
-        const cleanModuleName = getCleanModuleName(sharedModule);
-        moduleNameToEmittedChunkName[sharedModule] = getChunkNameForModule({
-          name: cleanModuleName,
-          type: 'shared'
+        const sanitizedModuleName = sanitizeModuleName(specifiedModulePath);
+        const chunkName = getChunkNameForModule({
+          name: sanitizedModuleName,
+          type,
         });
+        moduleNameToEmittedChunkName[chunkName] = specifiedModulePath;
         moduleIdToName[modulePath] = {
-          name: cleanModuleName,
-          type: 'shared'
-        };
-      }
-      for (const [exposedModule, exposedModulePath] of Object.entries(exposes)) {
-        const resolvedId = await this.resolve(exposedModulePath);
-        const modulePath = getModulePathFromResolvedId(resolvedId.id);
-        const cleanModuleName = getCleanModuleName(exposedModulePath);
-        moduleNameToEmittedChunkName[exposedModulePath] = getChunkNameForModule({
-          name: cleanModuleName,
-          type: 'exposed'
-        });
-        moduleIdToName[modulePath] = {
-          name: cleanModuleName,
-          type: 'exposed'
+          name: sanitizedModuleName,
+          type,
         };
       }
       /**
@@ -104,7 +107,7 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
-          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName)};
+          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName, null, 2)};
           const init = (sharedScope) => {
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
