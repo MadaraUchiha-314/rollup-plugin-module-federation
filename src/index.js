@@ -1,5 +1,6 @@
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
+import { getModulePathFromResolvedId, getCleanModuleName, getChunkNameForModule } from './utils.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
@@ -10,6 +11,14 @@ const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
 const REMOTE_ENTRY_FILE_NAME = 'remoteEntry.js';
 const REMOTE_ENTRY_NAME = 'remoteEntry';
 
+/** 
+ * All imports to shared/exposed/remotes will get converted to this expression. 
+ */
+const FEDERATED_IMPORT_EXPR = '__federatedImport__'; 
+const FEDERATED_IMPORT_FILE_NAME = 'federatedImport.js';
+const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
+const FEDERATED_IMPORT_NAME = 'federatedImport';
+
 export default function federation(federationConfig) {
   const {
     name,
@@ -17,10 +26,49 @@ export default function federation(federationConfig) {
     exposes,
     shared,
   } = federationConfig;
+
+  /**
+   * Created a mapping between resolvedId of the module to the module name (shared, exposed)
+   */
+  const moduleIdToName = {};
+  /**
+   * Created a mapping between the module name and the emitted chunk name
+   */
+  const moduleNameToEmittedChunkName = {};
+  
   return {
     name: 'rollup-plugin-federation',
     options(options) {},
-    buildStart(options) {
+    async buildStart(options) {
+      /**
+       * For each shared and exposed module we store the resolved paths for those modules.
+       */
+      for (const [sharedModule, sharedModuleHints] of Object.entries(shared)) {
+        const resolvedId = await this.resolve(sharedModule);
+        const modulePath = getModulePathFromResolvedId(resolvedId.id);
+        const cleanModuleName = getCleanModuleName(sharedModule);
+        moduleNameToEmittedChunkName[sharedModule] = getChunkNameForModule({
+          name: cleanModuleName,
+          type: 'shared'
+        });
+        moduleIdToName[modulePath] = {
+          name: cleanModuleName,
+          type: 'shared'
+        };
+      }
+      for (const [exposedModule, exposedModulePath] of Object.entries(exposes)) {
+        const resolvedId = await this.resolve(exposedModulePath);
+        const modulePath = getModulePathFromResolvedId(resolvedId.id);
+        const cleanModuleName = getCleanModuleName(exposedModulePath);
+        moduleNameToEmittedChunkName[exposedModulePath] = getChunkNameForModule({
+          name: cleanModuleName,
+          type: 'exposed'
+        });
+        moduleIdToName[modulePath] = {
+          name: cleanModuleName,
+          type: 'exposed'
+        };
+      }
       /**
        * Emit a file corresponding to the remote container.
        * This plugin will itself resolve this file in resolveId() and provide the implementation of the file in load()
@@ -44,6 +92,7 @@ export default function federation(federationConfig) {
       return null;
     },
     load(id) {
+      
       /**
        * Provide the code for the remote entry.
        */
@@ -55,6 +104,7 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
+          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName)};
           const init = (sharedScope) => {
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
@@ -123,6 +173,26 @@ export default function federation(federationConfig) {
         code: magicString.toString(),
       }
     },
+    outputOptions(outputOptions) {
+      /**
+       * Need to create a mapping b/w shared modules and their chunks.
+       * Unfortunately any of the hooks provided by rollup doesn't seem to have the information.
+       * The best bet we have is generate bundle, but even there an import('react') gets converted into { name: 'index', chunk: 'index-kjn234kj.js' }
+       * So we create a manual chunk function and provide it to the output options.
+       * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
+       */
+      const manualChunks = (id, { getModuleInfo, getModuleIds }) => {
+        const modulePath = getModulePathFromResolvedId(id);
+        if (Object.prototype.hasOwnProperty.call(moduleIdToName, modulePath)) {
+          return getChunkNameForModule(moduleIdToName[modulePath]);
+        }
+      };
+      return {
+        ...outputOptions,
+        manualChunks,
+        chunkFileNames: '[name].js'
+      };
+    },
     generateBundle(options, bundle, isWrite) {
       /**
        * In the transform step we have converted every import into an import expression.
@@ -134,7 +204,6 @@ export default function federation(federationConfig) {
         const magicString = new MagicString(chunkInfo.code);
         walk(ast, {
           enter(node) {
-            // console.debug("Entering node: ", node);
             /**
              * TODO: Only modify the import if we are either sharing or exposing it using module federation.
              */
@@ -148,7 +217,7 @@ export default function federation(federationConfig) {
                * TODO: What all information do we need to pass to this function ??
                * TODO: Implement ___federatedImport___ function.
                */
-              const moduleSpecifier = `__federatedImport__('${node.source.value}')`;
+              const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${node.source.value}')`;
               switch(node.type) {
                 case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
                   node.specifiers.map((specifier) => {
@@ -163,6 +232,9 @@ export default function federation(federationConfig) {
                         break;
                       }
                       case 'ImportNamespaceSpecifier': {
+                        /**
+                         * import * as ABC from 'pqr';
+                         */
                         federatedImportStms.push(
                           `const ${specifier.local.name} = await ${moduleSpecifier}`
                         );
@@ -170,10 +242,16 @@ export default function federation(federationConfig) {
                       }
                       case 'ImportSpecifier': {
                         if (specifier.imported.name !== specifier.local.name) {
+                          /**
+                           * import { ABC as XYZ } from 'pqr';
+                           */
                           federatedImportStms.push(
                             `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
                           );
                         } else {
+                          /**
+                           * import { ABC } from 'pqr';
+                           */
                           federatedImportStms.push(
                             `const { ${specifier.local.name} } = await ${moduleSpecifier}`
                           );
@@ -187,6 +265,9 @@ export default function federation(federationConfig) {
                   break;
                 }
                 case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportExpression: {
+                  /**
+                   * import('pqr')
+                   */
                   federatedImportStms.push(
                     moduleSpecifier,
                   );

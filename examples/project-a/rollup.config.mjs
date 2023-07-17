@@ -1,4 +1,6 @@
 import federation from '../../src/index.js';
+import commonjs from '@rollup/plugin-commonjs';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 export default ({
     input: {
@@ -9,6 +11,8 @@ export default ({
         format: 'es'
     },
     plugins: [
+        commonjs(),
+        nodeResolve(),
         federation({
             name: 'rr-random-package',
             filename: 'my-remote-entry.js',
