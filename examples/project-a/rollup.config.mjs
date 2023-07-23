@@ -1,11 +1,9 @@
 import federation from '../../src/index.js';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
 
 export default ({
-    input: {
-        index: 'src/index.js',
-    },
     output: {
         dir: 'dist',
         format: 'es'
@@ -13,6 +11,10 @@ export default ({
     plugins: [
         commonjs(),
         nodeResolve(),
+        replace({
+          'process.env.NODE_ENV': JSON.stringify('production'),
+          preventAssignment: true,
+        }),
         federation({
             name: 'rr-random-package',
             filename: 'my-remote-entry.js',

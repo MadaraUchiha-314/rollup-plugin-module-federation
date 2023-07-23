@@ -1,5 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
+
 import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule } from './utils.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
@@ -15,9 +20,12 @@ const REMOTE_ENTRY_NAME = 'remoteEntry';
  * All imports to shared/exposed/remotes will get converted to this expression. 
  */
 const FEDERATED_IMPORT_EXPR = '__federatedImport__'; 
-const FEDERATED_IMPORT_FILE_NAME = 'federatedImport.js';
+const FEDERATED_IMPORT_FILE_NAME = '__federatedImport__.js';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
 const FEDERATED_IMPORT_NAME = 'federatedImport';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default function federation(federationConfig) {
   const {
@@ -27,6 +35,8 @@ export default function federation(federationConfig) {
     shared,
   } = federationConfig;
 
+  const projectRoot = resolve();
+  const pkgJson = JSON.parse(readFileSync(`${projectRoot}/package.json`, 'utf-8'));
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
@@ -35,6 +45,31 @@ export default function federation(federationConfig) {
    * Created a mapping between the module name and the emitted chunk name
    */
   const moduleNameToEmittedChunkName = {};
+
+  /**
+   * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
+   * @param {string} moduleName The module name for which a version required.
+   */
+  const getVersionInfoForModule = (moduleName) => {
+    /**
+     * Check if module is shared.
+     */
+    const versionInfo = {
+      version: null,
+      requiredVersion: null,
+      strictVersion: null,
+      singleton: null,
+    };
+    if (Object.prototype.hasOwnProperty.call(shared, moduleName)) {
+      const versionInPkgJson = pkgJson?.dependencies?.[moduleName];
+      return {
+        ...versionInfo,
+        version: versionInPkgJson,
+        ...shared[moduleName],
+      };
+    }
+    return versionInfo;
+  };
   
   return {
     name: 'rollup-plugin-federation',
@@ -66,12 +101,26 @@ export default function federation(federationConfig) {
           name: sanitizedModuleName,
           type,
         });
-        moduleNameToEmittedChunkName[chunkName] = specifiedModulePath;
+        moduleNameToEmittedChunkName[`./${chunkName}.js`] = {
+          name: specifiedModulePath,
+          chunkPath: `./${chunkName}.js`,
+          ...getVersionInfoForModule(specifiedModulePath),
+        };
         moduleIdToName[modulePath] = {
           name: sanitizedModuleName,
           type,
         };
       }
+      /**
+       * Emit a file corresponding to the implementation of the __federatedImport__()
+       */
+      this.emitFile({
+        type: 'chunk',
+        id: FEDERATED_IMPORT_MODULE_ID,
+        name: FEDERATED_IMPORT_NAME,
+        fileName: FEDERATED_IMPORT_FILE_NAME,
+        importer: null,
+      });
       /**
        * Emit a file corresponding to the remote container.
        * This plugin will itself resolve this file in resolveId() and provide the implementation of the file in load()
@@ -91,6 +140,8 @@ export default function federation(federationConfig) {
        */
       if (source === REMOTE_ENTRY_MODULE_ID) {
         return REMOTE_ENTRY_MODULE_ID;
+      } else if (source === FEDERATED_IMPORT_MODULE_ID) {
+        return FEDERATED_IMPORT_MODULE_ID;
       }
       return null;
     },
@@ -107,7 +158,6 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
-          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName, null, 2)};
           const init = (sharedScope) => {
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
@@ -148,6 +198,12 @@ export default function federation(federationConfig) {
           export { init, get };
         `;
         return remoteEntryCode;
+      } else if (id === FEDERATED_IMPORT_MODULE_ID) {
+        const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
+        return `
+          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName, null, 2)};
+          ${__federatedImport__}
+        `;
       }
       return null;
     },
@@ -203,6 +259,13 @@ export default function federation(federationConfig) {
        * Once the chunks are built out, we transform those imports into __federated__imports__(chunkName, version, requestedVersion, ...);
        */
       Object.entries(bundle).forEach(([fileName, chunkInfo]) => {
+        /**
+         * We don't want to rewrite the imports of the federated imported module :p :D
+         * Kind of defeats the purpose.
+         */
+        if (chunkInfo?.facadeModuleId === FEDERATED_IMPORT_MODULE_ID) {
+          return;
+        }
         const ast = this.parse(chunkInfo.code);
         const magicString = new MagicString(chunkInfo.code);
         walk(ast, {
@@ -285,6 +348,7 @@ export default function federation(federationConfig) {
             }
           }
         });
+        magicString.prepend(`import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';`);
         chunkInfo.code = magicString.toString();
       });
     }
