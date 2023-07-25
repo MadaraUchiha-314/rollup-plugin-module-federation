@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 
-import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule } from './utils.js';
+import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson } from './utils.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
@@ -52,8 +52,6 @@ export default function federation(federationConfig) {
    * @param {string} moduleName The module name for which a version required.
    */
   const getVersionInfoForModule = (moduleName) => {
-    console.log(moduleName);
-    console.log(import.meta.resolve(moduleName, `file://${projectRoot}`));
     /**
      * Check if module is shared.
      */
@@ -86,6 +84,7 @@ export default function federation(federationConfig) {
        * Shared modules.
        */
       federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
+        name: sharedModuleName,
         specifiedModulePath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
         type: 'shared',
       })));
@@ -93,27 +92,31 @@ export default function federation(federationConfig) {
        * Exposed modules.
        */
       federatedModules.push(...Object.entries(exposes).map(([exposedModuleName, exposedModulePath]) => ({
+        name: exposedModuleName,
         specifiedModulePath: exposedModulePath,
         type: 'exposed',
       })));
-      for (const { specifiedModulePath, type } of federatedModules) {
+      for (const { name, specifiedModulePath, type } of federatedModules) {
         const resolvedId = await this.resolve(specifiedModulePath);
         const modulePath = getModulePathFromResolvedId(resolvedId.id);
         const sanitizedModuleName = sanitizeModuleName(specifiedModulePath);
         const chunkName = getChunkNameForModule({
-          name: sanitizedModuleName,
+          sanitizedModuleName,
           type,
         });
         moduleNameToEmittedChunkName[`./${chunkName}.js`] = {
-          name: specifiedModulePath,
+          name,
+          specifiedModulePath,
           chunkPath: `./${chunkName}.js`,
           ...getVersionInfoForModule(specifiedModulePath),
         };
         moduleIdToName[modulePath] = {
-          name: sanitizedModuleName,
+          name,
+          sanitizedModuleName,
           type,
         };
       }
+      console.log(moduleIdToName);
       /**
        * Emit a file corresponding to the implementation of the __federatedImport__()
        */
