@@ -36,6 +36,7 @@ export default function federation(federationConfig) {
   } = federationConfig;
 
   const projectRoot = resolve();
+  console.log(projectRoot);
   const pkgJson = JSON.parse(readFileSync(`${projectRoot}/package.json`, 'utf-8'));
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
@@ -51,6 +52,8 @@ export default function federation(federationConfig) {
    * @param {string} moduleName The module name for which a version required.
    */
   const getVersionInfoForModule = (moduleName) => {
+    console.log(moduleName);
+    console.log(import.meta.resolve(moduleName, `file://${projectRoot}`));
     /**
      * Check if module is shared.
      */
@@ -146,7 +149,6 @@ export default function federation(federationConfig) {
       return null;
     },
     load(id) {
-      
       /**
        * Provide the code for the remote entry.
        */
