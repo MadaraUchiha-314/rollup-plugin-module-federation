@@ -38,7 +38,6 @@ export default function federation(federationConfig) {
   } = federationConfig;
 
   const projectRoot = resolve();
-  console.log(projectRoot);
   const pkgJson = JSON.parse(readFileSync(`${projectRoot}/package.json`, 'utf-8'));
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
@@ -48,7 +47,6 @@ export default function federation(federationConfig) {
    * Created a mapping between the module name and the emitted chunk name
    */
   const moduleNameToEmittedChunkName = {};
-
   /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleName The module name for which a version required.
@@ -64,12 +62,12 @@ export default function federation(federationConfig) {
       singleton: null,
     };
     const nearestPkgJson = getNearestPackageJson(modulePath);
-    const moduleVersionInPkgJson = nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
+    const resolvedModuleVersionInPkgJson = nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
     if (Object.prototype.hasOwnProperty.call(shared, moduleName)) {
       const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleName];
       return {
         ...versionInfo,
-        version: moduleVersionInPkgJson,
+        version: resolvedModuleVersionInPkgJson,
         requiredVersion: versionInLocalPkgJson,
         ...shared[moduleName],
       };
@@ -88,6 +86,8 @@ export default function federation(federationConfig) {
       /**
        * Shared modules.
        * Its important to give priority to shared modules over exposed modules due to how versions are resolved.
+       * Shared modules have versions. 
+       * Exposed modules don't. The best we can do for exposed modules is the version of the package which is exposing these modules.
        */
       federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
         name: sharedModuleName,
