@@ -17,7 +17,7 @@ export function getNearestPackageJson(path) {
     const dir = lstatSync(path).isFile() ? dirname(path) : path;
     const pkgJsonPath = `${dir}/package.json`;
     if (existsSync(pkgJsonPath)) {
-        return readFileSync(pkgJsonPath, 'utf-8');
+        return JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
     }
     const parentDir = dirname(dir);
     if (parentDir === dir) {

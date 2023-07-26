@@ -64,7 +64,7 @@ export default function federation(federationConfig) {
       singleton: null,
     };
     const nearestPkgJson = getNearestPackageJson(modulePath);
-    const moduleVersionInPkgJson = nearestPkgJson?.dependencies?.[moduleName]?.version ?? MODULE_VERSION_UNSPECIFIED;
+    const moduleVersionInPkgJson = nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
     if (Object.prototype.hasOwnProperty.call(shared, moduleName)) {
       const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleName];
       return {
@@ -87,6 +87,7 @@ export default function federation(federationConfig) {
       const federatedModules = [];
       /**
        * Shared modules.
+       * Its important to give priority to shared modules over exposed modules due to how versions are resolved.
        */
       federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
         name: sharedModuleName,
@@ -115,13 +116,14 @@ export default function federation(federationConfig) {
           chunkPath: `./${chunkName}.js`,
           ...getVersionInfoForModule(specifiedModulePath, modulePath),
         };
-        moduleIdToName[modulePath] = {
-          name,
-          sanitizedModuleName,
-          type,
-        };
+        if (!Object.prototype.hasOwnProperty.call(moduleIdToName, modulePath)) {
+          moduleIdToName[modulePath] = {
+            name,
+            sanitizedModuleName,
+            type,
+          };
+        }
       }
-      console.log(moduleIdToName);
       /**
        * Emit a file corresponding to the implementation of the __federatedImport__()
        */
