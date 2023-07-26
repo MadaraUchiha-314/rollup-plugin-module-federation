@@ -24,6 +24,8 @@ const FEDERATED_IMPORT_FILE_NAME = '__federatedImport__.js';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
 const FEDERATED_IMPORT_NAME = 'federatedImport';
 
+const MODULE_VERSION_UNSPECIFIED = '0.0.0';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -51,7 +53,7 @@ export default function federation(federationConfig) {
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleName The module name for which a version required.
    */
-  const getVersionInfoForModule = (moduleName) => {
+  const getVersionInfoForModule = (moduleName, modulePath) => {
     /**
      * Check if module is shared.
      */
@@ -61,11 +63,14 @@ export default function federation(federationConfig) {
       strictVersion: null,
       singleton: null,
     };
+    const nearestPkgJson = getNearestPackageJson(modulePath);
+    const moduleVersionInPkgJson = nearestPkgJson?.dependencies?.[moduleName]?.version ?? MODULE_VERSION_UNSPECIFIED;
     if (Object.prototype.hasOwnProperty.call(shared, moduleName)) {
-      const versionInPkgJson = pkgJson?.dependencies?.[moduleName];
+      const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleName];
       return {
         ...versionInfo,
-        version: versionInPkgJson,
+        version: moduleVersionInPkgJson,
+        requiredVersion: versionInLocalPkgJson,
         ...shared[moduleName],
       };
     }
@@ -108,7 +113,7 @@ export default function federation(federationConfig) {
           name,
           specifiedModulePath,
           chunkPath: `./${chunkName}.js`,
-          ...getVersionInfoForModule(specifiedModulePath),
+          ...getVersionInfoForModule(specifiedModulePath, modulePath),
         };
         moduleIdToName[modulePath] = {
           name,
