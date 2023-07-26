@@ -42,16 +42,16 @@ export default function federation(federationConfig) {
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
-  const moduleIdToName = {};
+  const sharedOrExposedModuleInfo = {};
   /**
    * Created a mapping between the module name and the emitted chunk name
    */
   const moduleNameToEmittedChunkName = {};
   /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
-   * @param {string} moduleName The module name for which a version required.
+   * @param {string} moduleNameOrPath The module name for which a version required.
    */
-  const getVersionInfoForModule = (moduleName, modulePath) => {
+  const getVersionInfoForModule = (moduleNameOrPath, resolvedModulePath) => {
     /**
      * Check if module is shared.
      */
@@ -61,15 +61,15 @@ export default function federation(federationConfig) {
       strictVersion: null,
       singleton: null,
     };
-    const nearestPkgJson = getNearestPackageJson(modulePath);
+    const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
     const resolvedModuleVersionInPkgJson = nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
-    if (Object.prototype.hasOwnProperty.call(shared, moduleName)) {
-      const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleName];
+    if (Object.prototype.hasOwnProperty.call(shared, moduleNameOrPath)) {
+      const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleNameOrPath];
       return {
         ...versionInfo,
         version: resolvedModuleVersionInPkgJson,
         requiredVersion: versionInLocalPkgJson,
-        ...shared[moduleName],
+        ...shared[moduleNameOrPath],
       };
     }
     return versionInfo;
@@ -88,10 +88,11 @@ export default function federation(federationConfig) {
        * Its important to give priority to shared modules over exposed modules due to how versions are resolved.
        * Shared modules have versions. 
        * Exposed modules don't. The best we can do for exposed modules is the version of the package which is exposing these modules.
+       * If a module is both shared and exposed, we treat it as shared.
        */
       federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
         name: sharedModuleName,
-        specifiedModulePath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
+        moduleNameOrPath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
         type: 'shared',
       })));
       /**
@@ -99,27 +100,33 @@ export default function federation(federationConfig) {
        */
       federatedModules.push(...Object.entries(exposes).map(([exposedModuleName, exposedModulePath]) => ({
         name: exposedModuleName,
-        specifiedModulePath: exposedModulePath,
+        moduleNameOrPath: exposedModulePath,
         type: 'exposed',
       })));
-      for (const { name, specifiedModulePath, type } of federatedModules) {
-        const resolvedId = await this.resolve(specifiedModulePath);
-        const modulePath = getModulePathFromResolvedId(resolvedId.id);
-        const sanitizedModuleName = sanitizeModuleName(specifiedModulePath);
+      for (const { name, moduleNameOrPath, type } of federatedModules) {
+        /**
+         * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
+         */
+        const resolvedId = await this.resolve(moduleNameOrPath);
+        const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
+        /**
+         * Use sanitized module name/path everywhere.
+         */
+        const sanitizedModuleNameOrPath = sanitizeModuleName(moduleNameOrPath);
         const chunkName = getChunkNameForModule({
-          sanitizedModuleName,
+          sanitizedModuleNameOrPath,
           type,
         });
         moduleNameToEmittedChunkName[`./${chunkName}.js`] = {
           name,
-          specifiedModulePath,
+          moduleNameOrPath,
           chunkPath: `./${chunkName}.js`,
-          ...getVersionInfoForModule(specifiedModulePath, modulePath),
+          ...getVersionInfoForModule(moduleNameOrPath, resolvedModulePath),
         };
-        if (!Object.prototype.hasOwnProperty.call(moduleIdToName, modulePath)) {
-          moduleIdToName[modulePath] = {
+        if (!Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+          sharedOrExposedModuleInfo[resolvedModulePath] = {
             name,
-            sanitizedModuleName,
+            sanitizedModuleNameOrPath,
             type,
           };
         }
@@ -253,9 +260,9 @@ export default function federation(federationConfig) {
        * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
        */
       const manualChunks = (id, { getModuleInfo, getModuleIds }) => {
-        const modulePath = getModulePathFromResolvedId(id);
-        if (Object.prototype.hasOwnProperty.call(moduleIdToName, modulePath)) {
-          return getChunkNameForModule(moduleIdToName[modulePath]);
+        const resolvedModulePath = getModulePathFromResolvedId(id);
+        if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+          return getChunkNameForModule(sharedOrExposedModuleInfo[resolvedModulePath]);
         }
       };
       return {

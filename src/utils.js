@@ -9,8 +9,8 @@ export function sanitizeModuleName(name) {
     return name.replace(/\.|\//g, '_');
 }
 
-export function getChunkNameForModule({ sanitizedModuleName, type }) {
-    return `__federated__${type}__${sanitizedModuleName}`;
+export function getChunkNameForModule({ sanitizedModuleNameOrPath, type }) {
+    return `__federated__${type}__${sanitizedModuleNameOrPath}`;
 }
 
 export function getNearestPackageJson(path) {
