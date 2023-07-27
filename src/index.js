@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { EOL } from 'node:os';
 
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 
 import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
+import { PACKAGE_JSON } from './constants.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
@@ -38,7 +40,7 @@ export default function federation(federationConfig) {
   } = federationConfig;
 
   const projectRoot = resolve();
-  const pkgJson = JSON.parse(readFileSync(`${projectRoot}/package.json`, 'utf-8'));
+  const pkgJson = JSON.parse(readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'));
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
@@ -204,6 +206,17 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
+          function register(sharedScope, moduleNameOrPath, version, fallback) {
+            if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
+                sharedScope[moduleNameOrPath] = {};
+            }
+            if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
+                sharedScope[moduleNameOrPath][version] = {
+                    get: () => fallback.then((module) => module),
+                }
+            }
+            return sharedScope[moduleNameOrPath][version];
+          }
           const init = (sharedScope) => {
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
@@ -211,7 +224,7 @@ export default function federation(federationConfig) {
                  * TODO: Get the default values of these from the nearest package.json
                  */
                 const { 
-                  eager, packageName, requiredVersion, shareKey, shareScope, singleton, strictVersion, version,
+                  shareKey,
                 } = sharedModule;
                 /**
                  * Handle import false.
@@ -222,9 +235,7 @@ export default function federation(federationConfig) {
                  * TODO: Add versioning information.
                  */
                 return importedModule ? `
-                  sharedScope['${shareKey ?? key}']['${versionForSharedModule}'] = {
-                    get: () => import('${importedModule}').then((module) => module),
-                  };
+                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', import('${importedModule}'))
                 `: '';
               }).join('')
             }
@@ -396,7 +407,7 @@ export default function federation(federationConfig) {
             }
           }
         });
-        magicString.prepend(`import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';`);
+        magicString.prepend(`import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}`);
         chunkInfo.code = magicString.toString();
       });
     }
