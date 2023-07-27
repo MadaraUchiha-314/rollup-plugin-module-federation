@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { EOL } from 'node:os';
 
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 
-import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule } from './utils.js';
+import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
+import { PACKAGE_JSON } from './constants.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
@@ -24,6 +26,8 @@ const FEDERATED_IMPORT_FILE_NAME = '__federatedImport__.js';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
 const FEDERATED_IMPORT_NAME = 'federatedImport';
 
+const MODULE_VERSION_UNSPECIFIED = '0.0.0';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -36,21 +40,17 @@ export default function federation(federationConfig) {
   } = federationConfig;
 
   const projectRoot = resolve();
-  const pkgJson = JSON.parse(readFileSync(`${projectRoot}/package.json`, 'utf-8'));
+  const pkgJson = JSON.parse(readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'));
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
-  const moduleIdToName = {};
-  /**
-   * Created a mapping between the module name and the emitted chunk name
-   */
-  const moduleNameToEmittedChunkName = {};
-
+  const sharedOrExposedModuleInfo = {};
+  
   /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
-   * @param {string} moduleName The module name for which a version required.
+   * @param {string} moduleNameOrPath The module name for which a version required.
    */
-  const getVersionInfoForModule = (moduleName) => {
+  const getVersionInfoForModule = (moduleNameOrPath, resolvedModulePath) => {
     /**
      * Check if module is shared.
      */
@@ -60,15 +60,50 @@ export default function federation(federationConfig) {
       strictVersion: null,
       singleton: null,
     };
-    if (Object.prototype.hasOwnProperty.call(shared, moduleName)) {
-      const versionInPkgJson = pkgJson?.dependencies?.[moduleName];
+    const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
+    const resolvedModuleVersionInPkgJson = nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
+    if (Object.prototype.hasOwnProperty.call(shared, moduleNameOrPath)) {
+      const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleNameOrPath];
       return {
         ...versionInfo,
-        version: versionInPkgJson,
-        ...shared[moduleName],
+        version: resolvedModuleVersionInPkgJson,
+        requiredVersion: versionInLocalPkgJson,
+        ...shared[moduleNameOrPath],
       };
     }
     return versionInfo;
+  };
+
+  /**
+   * Get the resolved version for the module.
+   * @param {string} moduleNameOrPath The module name for which a version required.
+   * @returns 
+   */
+  const getVersionForModule = (moduleNameOrPath) => {
+    return Object.values(sharedOrExposedModuleInfo).find((moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath)?.versionInfo?.version ?? null;
+  };
+
+  /**
+   * Get the module map
+   */
+  const getModuleMap = () => {
+    return Object.values(sharedOrExposedModuleInfo).reduce((moduleMap, sharedOrExposedModuleInfo) => {
+      const { chunkPath, name, moduleNameOrPath, type, versionInfo } = sharedOrExposedModuleInfo;
+      const { version, requiredVersion, singleton, strictVersion } = versionInfo;
+      return {
+        ...moduleMap,
+        [chunkPath]: {
+          name, 
+          moduleNameOrPath,
+          chunkPath,
+          type,
+          version,
+          requiredVersion,
+          singleton,
+          strictVersion,
+        },
+      }
+    }, {});
   };
   
   return {
@@ -81,35 +116,49 @@ export default function federation(federationConfig) {
       const federatedModules = [];
       /**
        * Shared modules.
+       * Its important to give priority to shared modules over exposed modules due to how versions are resolved.
+       * Shared modules have versions. 
+       * Exposed modules don't. The best we can do for exposed modules is the version of the package which is exposing these modules.
+       * If a module is both shared and exposed, we treat it as shared.
        */
       federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
-        specifiedModulePath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
+        name: sharedModuleName,
+        moduleNameOrPath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
         type: 'shared',
       })));
       /**
        * Exposed modules.
        */
       federatedModules.push(...Object.entries(exposes).map(([exposedModuleName, exposedModulePath]) => ({
-        specifiedModulePath: exposedModulePath,
+        name: exposedModuleName,
+        moduleNameOrPath: exposedModulePath,
         type: 'exposed',
       })));
-      for (const { specifiedModulePath, type } of federatedModules) {
-        const resolvedId = await this.resolve(specifiedModulePath);
-        const modulePath = getModulePathFromResolvedId(resolvedId.id);
-        const sanitizedModuleName = sanitizeModuleName(specifiedModulePath);
+      for (const { name, moduleNameOrPath, type } of federatedModules) {
+        /**
+         * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
+         */
+        const resolvedId = await this.resolve(moduleNameOrPath);
+        const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
+        /**
+         * Use sanitized module name/path everywhere.
+         */
+        const sanitizedModuleNameOrPath = sanitizeModuleName(moduleNameOrPath);
         const chunkName = getChunkNameForModule({
-          name: sanitizedModuleName,
+          sanitizedModuleNameOrPath,
           type,
         });
-        moduleNameToEmittedChunkName[`./${chunkName}.js`] = {
-          name: specifiedModulePath,
-          chunkPath: `./${chunkName}.js`,
-          ...getVersionInfoForModule(specifiedModulePath),
-        };
-        moduleIdToName[modulePath] = {
-          name: sanitizedModuleName,
-          type,
-        };
+        const versionInfo = getVersionInfoForModule(moduleNameOrPath, resolvedModulePath);
+        if (!Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+          sharedOrExposedModuleInfo[resolvedModulePath] = {
+            name,
+            moduleNameOrPath,
+            sanitizedModuleNameOrPath,
+            type,
+            chunkPath: getFileNameFromChunkName(chunkName),
+            versionInfo,
+          };
+        }
       }
       /**
        * Emit a file corresponding to the implementation of the __federatedImport__()
@@ -146,7 +195,6 @@ export default function federation(federationConfig) {
       return null;
     },
     load(id) {
-      
       /**
        * Provide the code for the remote entry.
        */
@@ -158,6 +206,17 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
+          function register(sharedScope, moduleNameOrPath, version, fallback) {
+            if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
+                sharedScope[moduleNameOrPath] = {};
+            }
+            if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
+                sharedScope[moduleNameOrPath][version] = {
+                    get: () => fallback.then((module) => module),
+                }
+            }
+            return sharedScope[moduleNameOrPath][version];
+          }
           const init = (sharedScope) => {
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
@@ -165,19 +224,18 @@ export default function federation(federationConfig) {
                  * TODO: Get the default values of these from the nearest package.json
                  */
                 const { 
-                  eager, packageName, requiredVersion, shareKey, shareScope, singleton, strictVersion, version,
+                  shareKey,
                 } = sharedModule;
                 /**
                  * Handle import false.
                  */
                 const importedModule = sharedModule.import ?? key;
+                const versionForSharedModule = getVersionForModule(importedModule); 
                 /**
                  * TODO: Add versioning information.
                  */
                 return importedModule ? `
-                  sharedScope['${shareKey ?? key}']['${version}'] = {
-                    get: () => import('${importedModule}').then((module) => module),
-                  };
+                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', import('${importedModule}'))
                 `: '';
               }).join('')
             }
@@ -200,8 +258,9 @@ export default function federation(federationConfig) {
         return remoteEntryCode;
       } else if (id === FEDERATED_IMPORT_MODULE_ID) {
         const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
+        const moduleMap = getModuleMap();
         return `
-          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName, null, 2)};
+          export const moduleMap = ${JSON.stringify(moduleMap, null, 2)};
           ${__federatedImport__}
         `;
       }
@@ -241,9 +300,9 @@ export default function federation(federationConfig) {
        * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
        */
       const manualChunks = (id, { getModuleInfo, getModuleIds }) => {
-        const modulePath = getModulePathFromResolvedId(id);
-        if (Object.prototype.hasOwnProperty.call(moduleIdToName, modulePath)) {
-          return getChunkNameForModule(moduleIdToName[modulePath]);
+        const resolvedModulePath = getModulePathFromResolvedId(id);
+        if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+          return getChunkNameForModule(sharedOrExposedModuleInfo[resolvedModulePath]);
         }
       };
       return {
@@ -348,7 +407,7 @@ export default function federation(federationConfig) {
             }
           }
         });
-        magicString.prepend(`import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';`);
+        magicString.prepend(`import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}`);
         chunkInfo.code = magicString.toString();
       });
     }
