@@ -13,6 +13,10 @@ export function getChunkNameForModule({ sanitizedModuleNameOrPath, type }) {
     return `__federated__${type}__${sanitizedModuleNameOrPath}`;
 }
 
+export function getFileNameFromChunkName(chunkName) {
+    return `./${chunkName}.js`;
+}
+
 export function getNearestPackageJson(path) {
     const dir = lstatSync(path).isFile() ? dirname(path) : path;
     const pkgJsonPath = `${dir}/package.json`;

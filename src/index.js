@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { walk } from 'estree-walker';
 import MagicString from 'magic-string';
 
-import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson } from './utils.js';
+import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   'ImportDeclaration': 'ImportDeclaration',
@@ -44,10 +44,6 @@ export default function federation(federationConfig) {
    */
   const sharedOrExposedModuleInfo = {};
   /**
-   * Created a mapping between the module name and the emitted chunk name
-   */
-  const moduleNameToEmittedChunkName = {};
-  /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleNameOrPath The module name for which a version required.
    */
@@ -73,6 +69,15 @@ export default function federation(federationConfig) {
       };
     }
     return versionInfo;
+  };
+
+  /**
+   * Get the resolved version for the module.
+   * @param {string} moduleNameOrPath The module name for which a version required.
+   * @returns 
+   */
+  const getVersionForModule = (moduleNameOrPath) => {
+    return Object.values(sharedOrExposedModuleInfo).find((moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath)?.versionInfo?.version ?? null;
   };
   
   return {
@@ -117,17 +122,15 @@ export default function federation(federationConfig) {
           sanitizedModuleNameOrPath,
           type,
         });
-        moduleNameToEmittedChunkName[`./${chunkName}.js`] = {
-          name,
-          moduleNameOrPath,
-          chunkPath: `./${chunkName}.js`,
-          ...getVersionInfoForModule(moduleNameOrPath, resolvedModulePath),
-        };
+        const versionInfo = getVersionInfoForModule(moduleNameOrPath, resolvedModulePath);
         if (!Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
           sharedOrExposedModuleInfo[resolvedModulePath] = {
             name,
+            moduleNameOrPath,
             sanitizedModuleNameOrPath,
             type,
+            chunkPath: getFileNameFromChunkName(chunkName),
+            versionInfo,
           };
         }
       }
@@ -190,11 +193,12 @@ export default function federation(federationConfig) {
                  * Handle import false.
                  */
                 const importedModule = sharedModule.import ?? key;
+                const versionForSharedModule = getVersionForModule(importedModule); 
                 /**
                  * TODO: Add versioning information.
                  */
                 return importedModule ? `
-                  sharedScope['${shareKey ?? key}']['${version}'] = {
+                  sharedScope['${shareKey ?? key}']['${versionForSharedModule}'] = {
                     get: () => import('${importedModule}').then((module) => module),
                   };
                 `: '';
@@ -220,7 +224,7 @@ export default function federation(federationConfig) {
       } else if (id === FEDERATED_IMPORT_MODULE_ID) {
         const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
         return `
-          export const moduleMap = ${JSON.stringify(moduleNameToEmittedChunkName, null, 2)};
+          export const moduleMap = ${JSON.stringify({}, null, 2)};
           ${__federatedImport__}
         `;
       }
