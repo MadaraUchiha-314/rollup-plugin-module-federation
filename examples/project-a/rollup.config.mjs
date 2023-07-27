@@ -6,7 +6,7 @@ import replace from '@rollup/plugin-replace';
 export default ({
     output: {
         dir: 'dist',
-        format: 'es'
+        format: 'es',
     },
     plugins: [
         commonjs(),

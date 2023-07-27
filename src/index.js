@@ -218,6 +218,7 @@ export default function federation(federationConfig) {
             return sharedScope[moduleNameOrPath][version];
           }
           const init = (sharedScope) => {
+            setSharedScope(sharedScope);
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
                 /**
@@ -407,7 +408,9 @@ export default function federation(federationConfig) {
             }
           }
         });
-        magicString.prepend(`import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}`);
+        magicString.prepend(`
+          import { ${FEDERATED_IMPORT_EXPR}, setSharedScope } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
+        `);
         chunkInfo.code = magicString.toString();
       });
     }

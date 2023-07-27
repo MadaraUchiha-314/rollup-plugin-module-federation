@@ -1,3 +1,9 @@
+let sharedScope = null;
+
+export function setSharedScope(inheritedSharedScope) {
+    sharedScope = inheritedSharedScope;
+}
+
 export function __federatedImport__(moduleName) {
     if (Object.prototype.hasOwnProperty.call(moduleMap, moduleName)) {
         /**
