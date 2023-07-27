@@ -45,6 +45,10 @@ export default function federation(federationConfig) {
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
   const sharedOrExposedModuleInfo = {};
+  /**
+   * Module Map cache
+   */
+  let moduleMap = null;
   
   /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
@@ -161,6 +165,10 @@ export default function federation(federationConfig) {
         }
       }
       /**
+       * Save the current state of the the module map.
+       */
+      moduleMap = getModuleMap();
+      /**
        * Emit a file corresponding to the implementation of the __federatedImport__()
        */
       this.emitFile({
@@ -259,7 +267,6 @@ export default function federation(federationConfig) {
         return remoteEntryCode;
       } else if (id === FEDERATED_IMPORT_MODULE_ID) {
         const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
-        const moduleMap = getModuleMap();
         return `
           export const moduleMap = ${JSON.stringify(moduleMap, null, 2)};
           ${__federatedImport__}
@@ -328,11 +335,9 @@ export default function federation(federationConfig) {
         }
         const ast = this.parse(chunkInfo.code);
         const magicString = new MagicString(chunkInfo.code);
+        let chunkHasFederatedImports = false;
         walk(ast, {
           enter(node) {
-            /**
-             * TODO: Only modify the import if we are either sharing or exposing it using module federation.
-             */
             /**
              * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
              * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
@@ -341,9 +346,12 @@ export default function federation(federationConfig) {
               const federatedImportStms = [];
               /**
                * TODO: What all information do we need to pass to this function ??
-               * TODO: Implement ___federatedImport___ function.
                */
               const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${node.source.value}')`;
+              if (!Object.prototype.hasOwnProperty.call(moduleMap, node.source.value)) {
+                return;
+              }
+              chunkHasFederatedImports = true;
               switch(node.type) {
                 case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
                   node.specifiers.map((specifier) => {
@@ -408,9 +416,16 @@ export default function federation(federationConfig) {
             }
           }
         });
-        magicString.prepend(`
-          import { ${FEDERATED_IMPORT_EXPR}, setSharedScope } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
-        `);
+        if (chunkHasFederatedImports) {
+          magicString.prepend(`
+            import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
+          `);
+        }
+        if (chunkInfo?.facadeModuleId === REMOTE_ENTRY_MODULE_ID) {
+          magicString.prepend(`
+            import { setSharedScope } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
+          `);
+        }
         chunkInfo.code = magicString.toString();
       });
     }
