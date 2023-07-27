@@ -43,6 +43,7 @@ export default function federation(federationConfig) {
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
   const sharedOrExposedModuleInfo = {};
+  
   /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleNameOrPath The module name for which a version required.
@@ -78,6 +79,29 @@ export default function federation(federationConfig) {
    */
   const getVersionForModule = (moduleNameOrPath) => {
     return Object.values(sharedOrExposedModuleInfo).find((moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath)?.versionInfo?.version ?? null;
+  };
+
+  /**
+   * Get the module map
+   */
+  const getModuleMap = () => {
+    return Object.values(sharedOrExposedModuleInfo).reduce((moduleMap, sharedOrExposedModuleInfo) => {
+      const { chunkPath, name, moduleNameOrPath, type, versionInfo } = sharedOrExposedModuleInfo;
+      const { version, requiredVersion, singleton, strictVersion } = versionInfo;
+      return {
+        ...moduleMap,
+        [chunkPath]: {
+          name, 
+          moduleNameOrPath,
+          chunkPath,
+          type,
+          version,
+          requiredVersion,
+          singleton,
+          strictVersion,
+        },
+      }
+    }, {});
   };
   
   return {
@@ -223,8 +247,9 @@ export default function federation(federationConfig) {
         return remoteEntryCode;
       } else if (id === FEDERATED_IMPORT_MODULE_ID) {
         const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
+        const moduleMap = getModuleMap();
         return `
-          export const moduleMap = ${JSON.stringify({}, null, 2)};
+          export const moduleMap = ${JSON.stringify(moduleMap, null, 2)};
           ${__federatedImport__}
         `;
       }
