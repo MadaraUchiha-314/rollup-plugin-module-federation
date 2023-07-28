@@ -6,10 +6,11 @@ export function setSharedScope(inheritedSharedScope) {
     sharedScope = inheritedSharedScope;
 }
 
-export async function __federatedImport__(moduleName) {
-    if (Object.prototype.hasOwnProperty.call(moduleMap, moduleName)) {
+export async function __federatedImport__(modulePath) {
+    if (Object.prototype.hasOwnProperty.call(moduleMap, modulePath)) {
+        const moduleName = moduleMap[modulePath].moduleNameOrPath;
         const availableVersions = Object.keys(sharedScope?.[moduleName] ?? {});
-        const { requiredVersion } = moduleMap[moduleName];
+        const { requiredVersion } = moduleMap[modulePath];
         if (requiredVersion) {
             const maxSatisfyingVersion = maxSatisfying(availableVersions, requiredVersion);
             if (maxSatisfyingVersion) {
@@ -17,7 +18,7 @@ export async function __federatedImport__(moduleName) {
                 return module;
             }
         }
-        return import(moduleMap[moduleName].chunkPath);
+        return import(moduleMap[modulePath].chunkPath);
     }
-    throw Error(`${moduleName} not available in shared scope.`);
+    throw Error(`${modulePath} not available in shared scope.`);
 }
