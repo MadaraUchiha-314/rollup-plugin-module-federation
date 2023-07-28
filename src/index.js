@@ -220,7 +220,7 @@ export default function federation(federationConfig) {
             }
             if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
                 sharedScope[moduleNameOrPath][version] = {
-                    get: () => fallback.then((module) => module),
+                    get: () => fallback.then((module) => () => module),
                 }
             }
             return sharedScope[moduleNameOrPath][version];

@@ -14,7 +14,8 @@ export async function __federatedImport__(modulePath) {
         if (requiredVersion) {
             const maxSatisfyingVersion = maxSatisfying(availableVersions, requiredVersion);
             if (maxSatisfyingVersion) {
-                const module = (await sharedScope[moduleName][maxSatisfyingVersion].get())();
+                const factory = await sharedScope[moduleName][maxSatisfyingVersion].get();
+                const module = factory();
                 return module;
             }
         }
