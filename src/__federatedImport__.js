@@ -13,7 +13,7 @@ export async function __federatedImport__(moduleName) {
         if (requiredVersion) {
             const maxSatisfyingVersion = maxSatisfying(availableVersions, requiredVersion);
             if (maxSatisfyingVersion) {
-                const module = (await moduleMap[maxSatisfyingVersion].get())();
+                const module = (await sharedScope[moduleName][maxSatisfyingVersion].get())();
                 return module;
             }
         }
