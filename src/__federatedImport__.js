@@ -19,7 +19,9 @@ export async function __federatedImport__(modulePath) {
                 return module;
             }
         }
-        return import(moduleMap[modulePath].chunkPath);
+        if (moduleMap[modulePath].type === 'exposed') {
+            return import(modulePath);
+        }
     }
     throw Error(`${modulePath} not available in shared scope.`);
 }

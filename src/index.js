@@ -28,6 +28,9 @@ const FEDERATED_IMPORT_NAME = 'federatedImport';
 
 const MODULE_VERSION_UNSPECIFIED = '0.0.0';
 
+const ENTER_CONTAINER_INIT_MARKER = '__enter__container__init__';
+const EXIT_CONTAINER_INIT_MARKER = '__exit__container__init__';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -220,12 +223,13 @@ export default function federation(federationConfig) {
             }
             if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
                 sharedScope[moduleNameOrPath][version] = {
-                    get: () => fallback.then((module) => () => module),
+                    get: fallback,
                 }
             }
             return sharedScope[moduleNameOrPath][version];
           }
           const init = (sharedScope) => {
+            ${ENTER_CONTAINER_INIT_MARKER};
             setSharedScope(sharedScope);
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
@@ -244,10 +248,11 @@ export default function federation(federationConfig) {
                  * TODO: Add versioning information.
                  */
                 return importedModule ? `
-                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', import('${importedModule}'))
+                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
                 `: '';
               }).join('')
             }
+            ${EXIT_CONTAINER_INIT_MARKER};
           };
           const get = (module) => {
             switch(module) {
@@ -335,14 +340,29 @@ export default function federation(federationConfig) {
         }
         const ast = this.parse(chunkInfo.code);
         const magicString = new MagicString(chunkInfo.code);
+        /**
+         * Keep track of whether the chunk has a dynamic import or not.
+         * If it has, we need to import the function FEDERATED_IMPORT_EXPR.
+         */
         let chunkHasFederatedImports = false;
+        /**
+         * Keep track of whether we are inside the init function.
+         */
+        let insideFederatedInit = false;
         walk(ast, {
           enter(node) {
+            if (node.type === 'Identifier' && node.name === ENTER_CONTAINER_INIT_MARKER) {
+              insideFederatedInit = true;
+              magicString.remove(node.start, node.end);
+            } else if (node.type === 'Identifier' && node.name === EXIT_CONTAINER_INIT_MARKER) {
+              insideFederatedInit = false;
+              magicString.remove(node.start, node.end);
+            }
             /**
              * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
              * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
              */
-            if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
+            if (!insideFederatedInit && Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
               const federatedImportStms = [];
               /**
                * TODO: What all information do we need to pass to this function ??
