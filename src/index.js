@@ -3,7 +3,7 @@ import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EOL } from 'node:os';
 
-import { walk, asyncWalk } from 'estree-walker';
+import { asyncWalk } from 'estree-walker';
 import MagicString from 'magic-string';
 
 import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
@@ -15,15 +15,15 @@ const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
-const REMOTE_ENTRY_FILE_NAME = 'remoteEntry.js';
+const REMOTE_ENTRY_FILE_NAME = `${REMOTE_ENTRY_MODULE_ID}.js`;
 const REMOTE_ENTRY_NAME = 'remoteEntry';
 
 /** 
  * All imports to shared/exposed/remotes will get converted to this expression. 
  */
-const FEDERATED_IMPORT_EXPR = '__federatedImport__'; 
-const FEDERATED_IMPORT_FILE_NAME = '__federatedImport__.js';
+const FEDERATED_IMPORT_EXPR = '__federatedImport__';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
+const FEDERATED_IMPORT_FILE_NAME = `${FEDERATED_IMPORT_MODULE_ID}.js`;
 const FEDERATED_IMPORT_NAME = 'federatedImport';
 
 const MODULE_VERSION_UNSPECIFIED = '0.0.0';
@@ -293,6 +293,10 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
+          /**
+           * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
+           */
+          import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
           function register(sharedScope, moduleNameOrPath, version, fallback) {
             if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
                 sharedScope[moduleNameOrPath] = {};
@@ -305,7 +309,6 @@ export default function federation(federationConfig) {
             return sharedScope[moduleNameOrPath][version];
           }
           const init = (sharedScope) => {
-            ${ENTER_CONTAINER_INIT_MARKER};
             setSharedScope(sharedScope);
             ${
               Object.entries(shared).map(([key, sharedModule]) => {
@@ -328,7 +331,6 @@ export default function federation(federationConfig) {
                 `: '';
               }).join('')
             }
-            ${EXIT_CONTAINER_INIT_MARKER};
           };
           const get = (module) => {
             switch(module) {
@@ -356,17 +358,22 @@ export default function federation(federationConfig) {
       return null;
     },
     transform: {
-      order: 'pre',
-      async handler(code, id) {
-        /**
-       * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
+      /**
+       * Its important to keep the order as post, otherwise there might other transformed code that we will have to handle.
+       * When we mark it as post, we let other plugins handle it.
        */
-        if (id === REMOTE_ENTRY_MODULE_ID || id === FEDERATED_IMPORT_MODULE_ID) {
-          return;
-        }
+      order: 'post',
+      async handler(code, id) {
         const ast = this.parse(code);
         const magicString = new MagicString(code);
+        /**
+         * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
+         */
+        if (id === FEDERATED_IMPORT_MODULE_ID || id === REMOTE_ENTRY_MODULE_ID) {
+          return;
+        }
         const self = this;
+        let chunkHasFederatedImports = false;
         await asyncWalk(ast, {
           async enter(node) {
             /**
@@ -385,6 +392,7 @@ export default function federation(federationConfig) {
               const resolvedId = await self.resolve(node.source.value, id);
               const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
               if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+                chunkHasFederatedImports = true;
                 const chunkName = sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
                 const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
                 const federatedImportStmsStr = getFederatedImportStatementForNode(node, moduleSpecifier);
@@ -393,6 +401,17 @@ export default function federation(federationConfig) {
             }
           }
         });
+         /**
+         * The top level import of FEDERATED_IMPORT_EXPR
+         */
+         if (chunkHasFederatedImports) {
+          magicString.prepend(`
+            /**
+             * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
+             */
+            import { ${FEDERATED_IMPORT_EXPR} } from '${FEDERATED_IMPORT_MODULE_ID}';${EOL}
+          `);
+        }
         return {
           code: magicString.toString(),
         };
@@ -407,6 +426,15 @@ export default function federation(federationConfig) {
        * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
        */
       const manualChunks = (id, { getModuleInfo, getModuleIds }) => {
+        /**
+         * This is currently a hack so that rollup doesn't generate shared chunks between the exposed module and the FEDERATED_IMPORT_MODULE_ID.
+         * TODO: Find a better way to force rollup to do this.
+         */
+        if (id === FEDERATED_IMPORT_MODULE_ID) {
+          return FEDERATED_IMPORT_MODULE_ID;
+        } else if (id === REMOTE_ENTRY_MODULE_ID) {
+          return REMOTE_ENTRY_MODULE_ID;
+        }
         const resolvedModulePath = getModulePathFromResolvedId(id);
         if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
           return getChunkNameForModule(sharedOrExposedModuleInfo[resolvedModulePath]);
@@ -418,81 +446,5 @@ export default function federation(federationConfig) {
         chunkFileNames: '[name].js'
       };
     },
-    generateBundle(options, bundle, isWrite) {
-      /**
-       * In the transform step we have converted every import into an import expression.
-       * This ensures that the chunks are built out for this imports.
-       * Once the chunks are built out, we transform those imports into __federated__imports__(chunkName, version, requestedVersion, ...);
-       */
-      Object.entries(bundle).forEach(([fileName, chunkInfo]) => {
-        /**
-         * We don't want to rewrite the imports of the federated imported module :p :D
-         * Kind of defeats the purpose.
-         */
-        if (chunkInfo?.facadeModuleId === FEDERATED_IMPORT_MODULE_ID) {
-          return;
-        }
-        const ast = this.parse(chunkInfo.code);
-        const magicString = new MagicString(chunkInfo.code);
-        /**
-         * Keep track of whether the chunk has a dynamic import or not.
-         * If it has, we need to import the function FEDERATED_IMPORT_EXPR.
-         */
-        let chunkHasFederatedImports = false;
-        /**
-         * Keep track of whether we are inside the init function.
-         */
-        let insideFederatedInit = false;
-        walk(ast, {
-          enter(node) {
-            if (node.type === 'Identifier' && node.name === ENTER_CONTAINER_INIT_MARKER) {
-              insideFederatedInit = true;
-              magicString.remove(node.start, node.end);
-            } else if (node.type === 'Identifier' && node.name === EXIT_CONTAINER_INIT_MARKER) {
-              insideFederatedInit = false;
-              magicString.remove(node.start, node.end);
-            }
-            /**
-             * Some imports will be re-written in the transform stage.
-             */
-            if (node.type === 'Identifier' && node.name === FEDERATED_IMPORT_EXPR) {
-              chunkHasFederatedImports = true;
-            }
-            /**
-             * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
-             * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
-             */
-            if (!insideFederatedInit && Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
-              chunkHasFederatedImports = true;
-              if (chunkInfo?.facadeModuleId === REMOTE_ENTRY_MODULE_ID) {
-                /**
-                 * TODO: What all information do we need to pass to this function ??
-                 */
-                const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${node.source.value}')`;
-                if (!Object.prototype.hasOwnProperty.call(moduleMap, node.source.value)) {
-                  return;
-                }
-                const federatedImportStmsStr = getFederatedImportStatementForNode(node, moduleSpecifier);
-                magicString.overwrite(node.start, node.end, federatedImportStmsStr);
-              }
-            }
-          }
-        });
-        /**
-         * The top level import of FEDERATED_IMPORT_EXPR
-         */
-        if (chunkHasFederatedImports) {
-          magicString.prepend(`
-            import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
-          `);
-        }
-        if (chunkInfo?.facadeModuleId === REMOTE_ENTRY_MODULE_ID) {
-          magicString.prepend(`
-            import { setSharedScope } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
-          `);
-        }
-        chunkInfo.code = magicString.toString();
-      });
-    }
   }
 }
