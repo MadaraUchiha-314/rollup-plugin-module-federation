@@ -3,7 +3,7 @@ import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EOL } from 'node:os';
 
-import { walk } from 'estree-walker';
+import { asyncWalk } from 'estree-walker';
 import MagicString from 'magic-string';
 
 import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
@@ -15,21 +15,94 @@ const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
-const REMOTE_ENTRY_FILE_NAME = 'remoteEntry.js';
+const REMOTE_ENTRY_FILE_NAME = `${REMOTE_ENTRY_MODULE_ID}.js`;
 const REMOTE_ENTRY_NAME = 'remoteEntry';
 
 /** 
  * All imports to shared/exposed/remotes will get converted to this expression. 
  */
-const FEDERATED_IMPORT_EXPR = '__federatedImport__'; 
-const FEDERATED_IMPORT_FILE_NAME = '__federatedImport__.js';
+const FEDERATED_IMPORT_EXPR = '__federatedImport__';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
+const FEDERATED_IMPORT_FILE_NAME = `${FEDERATED_IMPORT_MODULE_ID}.js`;
 const FEDERATED_IMPORT_NAME = 'federatedImport';
 
 const MODULE_VERSION_UNSPECIFIED = '0.0.0';
 
+const ENTER_CONTAINER_INIT_MARKER = '__enter__container__init__';
+const EXIT_CONTAINER_INIT_MARKER = '__exit__container__init__';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+export function getFederatedImportStatementForNode(node, moduleSpecifier) {
+  const federatedImportStms = [];
+  /**
+   * TODO: What all types of nodes need to handled here ?
+   * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
+   * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
+   */
+  switch(node.type) {
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
+      node.specifiers.map((specifier) => {
+        switch(specifier.type) {
+          case 'ImportDefaultSpecifier': {
+            /**
+             * import ABC from 'pqr';
+             */
+            federatedImportStms.push(
+              `const ${specifier.local.name} = await ${moduleSpecifier}`
+            );
+            break;
+          }
+          case 'ImportNamespaceSpecifier': {
+            /**
+             * import * as ABC from 'pqr';
+             */
+            federatedImportStms.push(
+              `const ${specifier.local.name} = await ${moduleSpecifier}`
+            );
+            break;
+          }
+          case 'ImportSpecifier': {
+            if (specifier.imported.name !== specifier.local.name) {
+              /**
+               * import { ABC as XYZ } from 'pqr';
+               */
+              federatedImportStms.push(
+                `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
+              );
+            } else {
+              /**
+               * import { ABC } from 'pqr';
+               */
+              federatedImportStms.push(
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}`
+              );
+            }
+            break;
+          }
+          default:
+            throw Error(`Unhandled ImportDeclaration specifiers. ${JSON.stringify(specifier)}`);
+        }
+      });
+      break;
+    }
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportExpression: {
+      /**
+       * import('pqr')
+       */
+      federatedImportStms.push(
+        moduleSpecifier,
+      );
+      break;
+    }
+    default: {
+      break;
+    }
+  } 
+  const federatedImportStmsStr = federatedImportStms.join(';');
+  return federatedImportStmsStr;
+}
 
 export default function federation(federationConfig) {
   const {
@@ -45,6 +118,10 @@ export default function federation(federationConfig) {
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
   const sharedOrExposedModuleInfo = {};
+  /**
+   * Module Map cache
+   */
+  let moduleMap = null;
   
   /**
    * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
@@ -81,6 +158,12 @@ export default function federation(federationConfig) {
    */
   const getVersionForModule = (moduleNameOrPath) => {
     return Object.values(sharedOrExposedModuleInfo).find((moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath)?.versionInfo?.version ?? null;
+  };
+
+  const getResolvedIdForModuleNameOrPath = (moduleNameOrPath) => {
+    return Object.entries(sharedOrExposedModuleInfo).find(([_, moduleInfo]) => {
+      return moduleInfo.moduleNameOrPath === moduleNameOrPath;
+    })?.[0] ?? null;
   };
 
   /**
@@ -161,6 +244,10 @@ export default function federation(federationConfig) {
         }
       }
       /**
+       * Save the current state of the the module map.
+       */
+      moduleMap = getModuleMap();
+      /**
        * Emit a file corresponding to the implementation of the __federatedImport__()
        */
       this.emitFile({
@@ -206,13 +293,17 @@ export default function federation(federationConfig) {
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
+          /**
+           * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
+           */
+          import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
           function register(sharedScope, moduleNameOrPath, version, fallback) {
             if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
                 sharedScope[moduleNameOrPath] = {};
             }
             if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
                 sharedScope[moduleNameOrPath][version] = {
-                    get: () => fallback.then((module) => module),
+                    get: fallback,
                 }
             }
             return sharedScope[moduleNameOrPath][version];
@@ -236,7 +327,7 @@ export default function federation(federationConfig) {
                  * TODO: Add versioning information.
                  */
                 return importedModule ? `
-                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', import('${importedModule}'))
+                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
                 `: '';
               }).join('')
             }
@@ -259,7 +350,6 @@ export default function federation(federationConfig) {
         return remoteEntryCode;
       } else if (id === FEDERATED_IMPORT_MODULE_ID) {
         const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
-        const moduleMap = getModuleMap();
         return `
           export const moduleMap = ${JSON.stringify(moduleMap, null, 2)};
           ${__federatedImport__}
@@ -267,29 +357,64 @@ export default function federation(federationConfig) {
       }
       return null;
     },
-    transform(code, id) {
-      const ast = this.parse(code);
-      const magicString = new MagicString(code);
-      walk(ast, {
-        enter(node) {
-          /**
-           * TODO: What all types of nodes need to handled here ?
-           * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
-           * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
-           */
-          /**
-           * TODO: Check if we are statically importing any local files that are shared or exposed.
-           * We need to generate a separate chunk for those files.
-           * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
-           * We convert those imorts into dynamic imports.
-           * What about eager ? Don't know. TBD.
-           */
-          if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
-          }
+    transform: {
+      /**
+       * Its important to keep the order as post, otherwise there might other transformed code that we will have to handle.
+       * When we mark it as post, we let other plugins handle it.
+       */
+      order: 'post',
+      async handler(code, id) {
+        const ast = this.parse(code);
+        const magicString = new MagicString(code);
+        /**
+         * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
+         */
+        if (id === FEDERATED_IMPORT_MODULE_ID || id === REMOTE_ENTRY_MODULE_ID) {
+          return;
         }
-      })
-      return {
-        code: magicString.toString(),
+        const self = this;
+        let chunkHasFederatedImports = false;
+        await asyncWalk(ast, {
+          async enter(node) {
+            /**
+             * TODO: Check if we are statically importing any local files that are shared or exposed.
+             * We need to generate a separate chunk for those files.
+             * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
+             * We convert those imorts into dynamic imports.
+             * What about eager ? Don't know. TBD.
+             */
+            if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
+              /**
+               * At this point rollup hasn't completed resolution of the import statements in this file.
+               * Imports might still be relative to the current file.
+               * Its crucial to call the this.resolve() with the importer (2nd arg) to actually resolve the import.
+               */
+              const resolvedId = await self.resolve(node.source.value, id);
+              const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
+              if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+                chunkHasFederatedImports = true;
+                const chunkName = sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
+                const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
+                const federatedImportStmsStr = getFederatedImportStatementForNode(node, moduleSpecifier);
+                magicString.overwrite(node.start, node.end, federatedImportStmsStr);
+              }
+            }
+          }
+        });
+         /**
+         * The top level import of FEDERATED_IMPORT_EXPR
+         */
+         if (chunkHasFederatedImports) {
+          magicString.prepend(`
+            /**
+             * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
+             */
+            import { ${FEDERATED_IMPORT_EXPR} } from '${FEDERATED_IMPORT_MODULE_ID}';${EOL}
+          `);
+        }
+        return {
+          code: magicString.toString(),
+        };
       }
     },
     outputOptions(outputOptions) {
@@ -301,6 +426,15 @@ export default function federation(federationConfig) {
        * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
        */
       const manualChunks = (id, { getModuleInfo, getModuleIds }) => {
+        /**
+         * This is currently a hack so that rollup doesn't generate shared chunks between the exposed module and the FEDERATED_IMPORT_MODULE_ID.
+         * TODO: Find a better way to force rollup to do this.
+         */
+        if (id === FEDERATED_IMPORT_MODULE_ID) {
+          return FEDERATED_IMPORT_MODULE_ID;
+        } else if (id === REMOTE_ENTRY_MODULE_ID) {
+          return REMOTE_ENTRY_MODULE_ID;
+        }
         const resolvedModulePath = getModulePathFromResolvedId(id);
         if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
           return getChunkNameForModule(sharedOrExposedModuleInfo[resolvedModulePath]);
@@ -312,107 +446,5 @@ export default function federation(federationConfig) {
         chunkFileNames: '[name].js'
       };
     },
-    generateBundle(options, bundle, isWrite) {
-      /**
-       * In the transform step we have converted every import into an import expression.
-       * This ensures that the chunks are built out for this imports.
-       * Once the chunks are built out, we transform those imports into __federated__imports__(chunkName, version, requestedVersion, ...);
-       */
-      Object.entries(bundle).forEach(([fileName, chunkInfo]) => {
-        /**
-         * We don't want to rewrite the imports of the federated imported module :p :D
-         * Kind of defeats the purpose.
-         */
-        if (chunkInfo?.facadeModuleId === FEDERATED_IMPORT_MODULE_ID) {
-          return;
-        }
-        const ast = this.parse(chunkInfo.code);
-        const magicString = new MagicString(chunkInfo.code);
-        walk(ast, {
-          enter(node) {
-            /**
-             * TODO: Only modify the import if we are either sharing or exposing it using module federation.
-             */
-            /**
-             * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
-             * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
-             */
-            if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
-              const federatedImportStms = [];
-              /**
-               * TODO: What all information do we need to pass to this function ??
-               * TODO: Implement ___federatedImport___ function.
-               */
-              const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${node.source.value}')`;
-              switch(node.type) {
-                case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
-                  node.specifiers.map((specifier) => {
-                    switch(specifier.type) {
-                      case 'ImportDefaultSpecifier': {
-                        /**
-                         * import ABC from 'pqr';
-                         */
-                        federatedImportStms.push(
-                          `const ${specifier.local.name} = await ${moduleSpecifier}`
-                        );
-                        break;
-                      }
-                      case 'ImportNamespaceSpecifier': {
-                        /**
-                         * import * as ABC from 'pqr';
-                         */
-                        federatedImportStms.push(
-                          `const ${specifier.local.name} = await ${moduleSpecifier}`
-                        );
-                        break;
-                      }
-                      case 'ImportSpecifier': {
-                        if (specifier.imported.name !== specifier.local.name) {
-                          /**
-                           * import { ABC as XYZ } from 'pqr';
-                           */
-                          federatedImportStms.push(
-                            `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
-                          );
-                        } else {
-                          /**
-                           * import { ABC } from 'pqr';
-                           */
-                          federatedImportStms.push(
-                            `const { ${specifier.local.name} } = await ${moduleSpecifier}`
-                          );
-                        }
-                        break;
-                      }
-                      default:
-                        throw Error(`Unhandled ImportDeclaration specifiers. ${JSON.stringify(specifier)}`);
-                    }
-                  });
-                  break;
-                }
-                case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportExpression: {
-                  /**
-                   * import('pqr')
-                   */
-                  federatedImportStms.push(
-                    moduleSpecifier,
-                  );
-                  break;
-                }
-                default: {
-                  break;
-                }
-              } 
-              const federatedImportStmsStr = federatedImportStms.join(';');
-              magicString.overwrite(node.start, node.end, federatedImportStmsStr);
-            }
-          }
-        });
-        magicString.prepend(`
-          import { ${FEDERATED_IMPORT_EXPR}, setSharedScope } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
-        `);
-        chunkInfo.code = magicString.toString();
-      });
-    }
   }
 }

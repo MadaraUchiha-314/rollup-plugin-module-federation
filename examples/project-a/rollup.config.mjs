@@ -9,8 +9,7 @@ export default ({
         format: 'es',
     },
     plugins: [
-        commonjs(),
-        nodeResolve(),
+       
         replace({
           'process.env.NODE_ENV': JSON.stringify('production'),
           preventAssignment: true,
@@ -19,17 +18,20 @@ export default ({
             name: 'rr-random-package',
             filename: 'my-remote-entry.js',
             exposes: {
-              './index': './src/index.js',
               './react': 'react',
-              './pqr': './src/pqr.js'
+              './pqr': './src/pqr.js',
+              './index': './src/index.js',
             },
             shared: {
               react: {},
               'react-dom': {},
               uuid: {
-                import: false,
+                // import: false,
               },
             },
         }),
+        nodeResolve(),
+
+        commonjs(),
     ]
 })
