@@ -1,7 +1,9 @@
-import federation from '../../src/index.js';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
+
+// import federation from "@originjs/vite-plugin-federation";
+import federation from '../../src/index.js';
 
 export default ({
     output: {
@@ -9,7 +11,6 @@ export default ({
         format: 'es',
     },
     plugins: [
-       
         replace({
           'process.env.NODE_ENV': JSON.stringify('production'),
           preventAssignment: true,
@@ -31,7 +32,6 @@ export default ({
             },
         }),
         nodeResolve(),
-
         commonjs(),
     ]
 })
