@@ -36,6 +36,11 @@ const __dirname = dirname(__filename);
 
 export function getFederatedImportStatementForNode(node, moduleSpecifier) {
   const federatedImportStms = [];
+  /**
+   * TODO: What all types of nodes need to handled here ?
+   * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
+   * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
+   */
   switch(node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       node.specifiers.map((specifier) => {
@@ -153,6 +158,12 @@ export default function federation(federationConfig) {
    */
   const getVersionForModule = (moduleNameOrPath) => {
     return Object.values(sharedOrExposedModuleInfo).find((moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath)?.versionInfo?.version ?? null;
+  };
+
+  const getResolvedIdForModuleNameOrPath = (moduleNameOrPath) => {
+    return Object.entries(sharedOrExposedModuleInfo).find(([_, moduleInfo]) => {
+      return moduleInfo.moduleNameOrPath === moduleNameOrPath;
+    })?.[0] ?? null;
   };
 
   /**
@@ -359,11 +370,6 @@ export default function federation(federationConfig) {
         await asyncWalk(ast, {
           async enter(node) {
             /**
-             * TODO: What all types of nodes need to handled here ?
-             * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
-             * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
-             */
-            /**
              * TODO: Check if we are statically importing any local files that are shared or exposed.
              * We need to generate a separate chunk for those files.
              * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
@@ -374,7 +380,7 @@ export default function federation(federationConfig) {
               /**
                * At this point rollup hasn't completed resolution of the import statements in this file.
                * Imports might still be relative to the current file.
-               * Its crucial to call the this.resolve() with the importer to actually resolve the import.
+               * Its crucial to call the this.resolve() with the importer (2nd arg) to actually resolve the import.
                */
               const resolvedId = await self.resolve(node.source.value, id);
               const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
@@ -447,6 +453,12 @@ export default function federation(federationConfig) {
               magicString.remove(node.start, node.end);
             }
             /**
+             * Some imports will be re-written in the transform stage.
+             */
+            if (node.type === 'Identifier' && node.name === FEDERATED_IMPORT_EXPR) {
+              chunkHasFederatedImports = true;
+            }
+            /**
              * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
              * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
              */
@@ -466,6 +478,9 @@ export default function federation(federationConfig) {
             }
           }
         });
+        /**
+         * The top level import of FEDERATED_IMPORT_EXPR
+         */
         if (chunkHasFederatedImports) {
           magicString.prepend(`
             import { ${FEDERATED_IMPORT_EXPR} } from './${FEDERATED_IMPORT_FILE_NAME}';${EOL}
