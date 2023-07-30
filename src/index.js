@@ -3,7 +3,7 @@ import { resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EOL } from 'node:os';
 
-import { walk } from 'estree-walker';
+import { walk, asyncWalk } from 'estree-walker';
 import MagicString from 'magic-string';
 
 import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
@@ -33,6 +33,71 @@ const EXIT_CONTAINER_INIT_MARKER = '__exit__container__init__';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+export function getFederatedImportStatementForNode(node, moduleSpecifier) {
+  const federatedImportStms = [];
+  switch(node.type) {
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
+      node.specifiers.map((specifier) => {
+        switch(specifier.type) {
+          case 'ImportDefaultSpecifier': {
+            /**
+             * import ABC from 'pqr';
+             */
+            federatedImportStms.push(
+              `const ${specifier.local.name} = await ${moduleSpecifier}`
+            );
+            break;
+          }
+          case 'ImportNamespaceSpecifier': {
+            /**
+             * import * as ABC from 'pqr';
+             */
+            federatedImportStms.push(
+              `const ${specifier.local.name} = await ${moduleSpecifier}`
+            );
+            break;
+          }
+          case 'ImportSpecifier': {
+            if (specifier.imported.name !== specifier.local.name) {
+              /**
+               * import { ABC as XYZ } from 'pqr';
+               */
+              federatedImportStms.push(
+                `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
+              );
+            } else {
+              /**
+               * import { ABC } from 'pqr';
+               */
+              federatedImportStms.push(
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}`
+              );
+            }
+            break;
+          }
+          default:
+            throw Error(`Unhandled ImportDeclaration specifiers. ${JSON.stringify(specifier)}`);
+        }
+      });
+      break;
+    }
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportExpression: {
+      /**
+       * import('pqr')
+       */
+      federatedImportStms.push(
+        moduleSpecifier,
+      );
+      break;
+    }
+    default: {
+      break;
+    }
+  } 
+  const federatedImportStmsStr = federatedImportStms.join(';');
+  return federatedImportStmsStr;
+}
 
 export default function federation(federationConfig) {
   const {
@@ -279,29 +344,52 @@ export default function federation(federationConfig) {
       }
       return null;
     },
-    transform(code, id) {
-      const ast = this.parse(code);
-      const magicString = new MagicString(code);
-      walk(ast, {
-        enter(node) {
-          /**
-           * TODO: What all types of nodes need to handled here ?
-           * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
-           * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
-           */
-          /**
-           * TODO: Check if we are statically importing any local files that are shared or exposed.
-           * We need to generate a separate chunk for those files.
-           * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
-           * We convert those imorts into dynamic imports.
-           * What about eager ? Don't know. TBD.
-           */
-          if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
-          }
+    transform: {
+      order: 'pre',
+      async handler(code, id) {
+        /**
+       * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
+       */
+        if (id === REMOTE_ENTRY_MODULE_ID || id === FEDERATED_IMPORT_MODULE_ID) {
+          return;
         }
-      })
-      return {
-        code: magicString.toString(),
+        const ast = this.parse(code);
+        const magicString = new MagicString(code);
+        const self = this;
+        await asyncWalk(ast, {
+          async enter(node) {
+            /**
+             * TODO: What all types of nodes need to handled here ?
+             * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
+             * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
+             */
+            /**
+             * TODO: Check if we are statically importing any local files that are shared or exposed.
+             * We need to generate a separate chunk for those files.
+             * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
+             * We convert those imorts into dynamic imports.
+             * What about eager ? Don't know. TBD.
+             */
+            if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
+              /**
+               * At this point rollup hasn't completed resolution of the import statements in this file.
+               * Imports might still be relative to the current file.
+               * Its crucial to call the this.resolve() with the importer to actually resolve the import.
+               */
+              const resolvedId = await self.resolve(node.source.value, id);
+              const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
+              if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+                const chunkName = sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
+                const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
+                const federatedImportStmsStr = getFederatedImportStatementForNode(node, moduleSpecifier);
+                magicString.overwrite(node.start, node.end, federatedImportStmsStr);
+              }
+            }
+          }
+        });
+        return {
+          code: magicString.toString(),
+        };
       }
     },
     outputOptions(outputOptions) {
@@ -363,76 +451,18 @@ export default function federation(federationConfig) {
              * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
              */
             if (!insideFederatedInit && Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
-              const federatedImportStms = [];
-              /**
-               * TODO: What all information do we need to pass to this function ??
-               */
-              const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${node.source.value}')`;
-              if (!Object.prototype.hasOwnProperty.call(moduleMap, node.source.value)) {
-                return;
-              }
               chunkHasFederatedImports = true;
-              switch(node.type) {
-                case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
-                  node.specifiers.map((specifier) => {
-                    switch(specifier.type) {
-                      case 'ImportDefaultSpecifier': {
-                        /**
-                         * import ABC from 'pqr';
-                         */
-                        federatedImportStms.push(
-                          `const ${specifier.local.name} = await ${moduleSpecifier}`
-                        );
-                        break;
-                      }
-                      case 'ImportNamespaceSpecifier': {
-                        /**
-                         * import * as ABC from 'pqr';
-                         */
-                        federatedImportStms.push(
-                          `const ${specifier.local.name} = await ${moduleSpecifier}`
-                        );
-                        break;
-                      }
-                      case 'ImportSpecifier': {
-                        if (specifier.imported.name !== specifier.local.name) {
-                          /**
-                           * import { ABC as XYZ } from 'pqr';
-                           */
-                          federatedImportStms.push(
-                            `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
-                          );
-                        } else {
-                          /**
-                           * import { ABC } from 'pqr';
-                           */
-                          federatedImportStms.push(
-                            `const { ${specifier.local.name} } = await ${moduleSpecifier}`
-                          );
-                        }
-                        break;
-                      }
-                      default:
-                        throw Error(`Unhandled ImportDeclaration specifiers. ${JSON.stringify(specifier)}`);
-                    }
-                  });
-                  break;
+              if (chunkInfo?.facadeModuleId === REMOTE_ENTRY_MODULE_ID) {
+                /**
+                 * TODO: What all information do we need to pass to this function ??
+                 */
+                const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${node.source.value}')`;
+                if (!Object.prototype.hasOwnProperty.call(moduleMap, node.source.value)) {
+                  return;
                 }
-                case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportExpression: {
-                  /**
-                   * import('pqr')
-                   */
-                  federatedImportStms.push(
-                    moduleSpecifier,
-                  );
-                  break;
-                }
-                default: {
-                  break;
-                }
-              } 
-              const federatedImportStmsStr = federatedImportStms.join(';');
-              magicString.overwrite(node.start, node.end, federatedImportStmsStr);
+                const federatedImportStmsStr = getFederatedImportStatementForNode(node, moduleSpecifier);
+                magicString.overwrite(node.start, node.end, federatedImportStmsStr);
+              }
             }
           }
         });
