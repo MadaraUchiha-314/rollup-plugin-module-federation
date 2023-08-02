@@ -6,20 +6,26 @@ import { EOL } from 'node:os';
 import { asyncWalk } from 'estree-walker';
 import MagicString from 'magic-string';
 
-import { getModulePathFromResolvedId, sanitizeModuleName, getChunkNameForModule, getNearestPackageJson, getFileNameFromChunkName } from './utils.js';
+import {
+  getModulePathFromResolvedId,
+  sanitizeModuleName,
+  getChunkNameForModule,
+  getNearestPackageJson,
+  getFileNameFromChunkName,
+} from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
-  'ImportDeclaration': 'ImportDeclaration',
-  'ImportExpression': 'ImportExpression'
+  ImportDeclaration: 'ImportDeclaration',
+  ImportExpression: 'ImportExpression',
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
 const REMOTE_ENTRY_FILE_NAME = `${REMOTE_ENTRY_MODULE_ID}.js`;
 const REMOTE_ENTRY_NAME = 'remoteEntry';
 
-/** 
- * All imports to shared/exposed/remotes will get converted to this expression. 
+/**
+ * All imports to shared/exposed/remotes will get converted to this expression.
  */
 const FEDERATED_IMPORT_EXPR = '__federatedImport__';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
@@ -27,9 +33,6 @@ const FEDERATED_IMPORT_FILE_NAME = `${FEDERATED_IMPORT_MODULE_ID}.js`;
 const FEDERATED_IMPORT_NAME = 'federatedImport';
 
 const MODULE_VERSION_UNSPECIFIED = '0.0.0';
-
-const ENTER_CONTAINER_INIT_MARKER = '__enter__container__init__';
-const EXIT_CONTAINER_INIT_MARKER = '__exit__container__init__';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,16 +44,16 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
    * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
-  switch(node.type) {
+  switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
-      node.specifiers.map((specifier) => {
-        switch(specifier.type) {
+      node.specifiers.forEach((specifier) => {
+        switch (specifier.type) {
           case 'ImportDefaultSpecifier': {
             /**
              * import ABC from 'pqr';
              */
             federatedImportStms.push(
-              `const ${specifier.local.name} = await ${moduleSpecifier}`
+              `const ${specifier.local.name} = await ${moduleSpecifier}`,
             );
             break;
           }
@@ -59,7 +62,7 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
              * import * as ABC from 'pqr';
              */
             federatedImportStms.push(
-              `const ${specifier.local.name} = await ${moduleSpecifier}`
+              `const ${specifier.local.name} = await ${moduleSpecifier}`,
             );
             break;
           }
@@ -69,20 +72,24 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
                * import { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`
+                `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`,
               );
             } else {
               /**
                * import { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}`
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}`,
               );
             }
             break;
           }
           default:
-            throw Error(`Unhandled ImportDeclaration specifiers. ${JSON.stringify(specifier)}`);
+            throw Error(
+              `Unhandled ImportDeclaration specifiers. ${JSON.stringify(
+                specifier,
+              )}`,
+            );
         }
       });
       break;
@@ -91,29 +98,26 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
       /**
        * import('pqr')
        */
-      federatedImportStms.push(
-        moduleSpecifier,
-      );
+      federatedImportStms.push(moduleSpecifier);
       break;
     }
     default: {
       break;
     }
-  } 
+  }
   const federatedImportStmsStr = federatedImportStms.join(';');
   return federatedImportStmsStr;
 }
 
 export default function federation(federationConfig) {
   const {
-    name,
-    filename,
-    exposes,
-    shared,
+    name, filename, exposes, shared,
   } = federationConfig;
 
   const projectRoot = resolve();
-  const pkgJson = JSON.parse(readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'));
+  const pkgJson = JSON.parse(
+    readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'),
+  );
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
@@ -122,9 +126,10 @@ export default function federation(federationConfig) {
    * Module Map cache
    */
   let moduleMap = null;
-  
+
   /**
-   * Get the version of module. Module version if not specified in the federation config needs to be taken from the package.json
+   * Get the version of module.
+   * Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleNameOrPath The module name for which a version required.
    */
   const getVersionInfoForModule = (moduleNameOrPath, resolvedModulePath) => {
@@ -154,29 +159,27 @@ export default function federation(federationConfig) {
   /**
    * Get the resolved version for the module.
    * @param {string} moduleNameOrPath The module name for which a version required.
-   * @returns 
+   * @returns
    */
-  const getVersionForModule = (moduleNameOrPath) => {
-    return Object.values(sharedOrExposedModuleInfo).find((moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath)?.versionInfo?.version ?? null;
-  };
-
-  const getResolvedIdForModuleNameOrPath = (moduleNameOrPath) => {
-    return Object.entries(sharedOrExposedModuleInfo).find(([_, moduleInfo]) => {
-      return moduleInfo.moduleNameOrPath === moduleNameOrPath;
-    })?.[0] ?? null;
-  };
+  const getVersionForModule = (moduleNameOrPath) => Object.values(sharedOrExposedModuleInfo).find(
+    (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+  )?.versionInfo?.version ?? null;
 
   /**
    * Get the module map
    */
-  const getModuleMap = () => {
-    return Object.values(sharedOrExposedModuleInfo).reduce((moduleMap, sharedOrExposedModuleInfo) => {
-      const { chunkPath, name, moduleNameOrPath, type, versionInfo } = sharedOrExposedModuleInfo;
-      const { version, requiredVersion, singleton, strictVersion } = versionInfo;
+  const getModuleMap = () => Object.values(sharedOrExposedModuleInfo).reduce(
+    (currentModuleMap, moduleInfo) => {
+      const {
+        chunkPath, name: moduleName, moduleNameOrPath, type, versionInfo,
+      } = moduleInfo;
+      const {
+        version, requiredVersion, singleton, strictVersion,
+      } = versionInfo;
       return {
-        ...moduleMap,
+        ...currentModuleMap,
         [chunkPath]: {
-          name, 
+          name: moduleName,
           moduleNameOrPath,
           chunkPath,
           type,
@@ -185,14 +188,14 @@ export default function federation(federationConfig) {
           singleton,
           strictVersion,
         },
-      }
-    }, {});
-  };
-  
+      };
+    },
+    {},
+  );
+
   return {
     name: 'rollup-plugin-federation',
-    options(options) {},
-    async buildStart(options) {
+    async buildStart() {
       /**
        * For each shared and exposed module we store the resolved paths for those modules.
        */
@@ -200,27 +203,39 @@ export default function federation(federationConfig) {
       /**
        * Shared modules.
        * Its important to give priority to shared modules over exposed modules due to how versions are resolved.
-       * Shared modules have versions. 
+       * Shared modules have versions.
        * Exposed modules don't. The best we can do for exposed modules is the version of the package which is exposing these modules.
        * If a module is both shared and exposed, we treat it as shared.
        */
-      federatedModules.push(...Object.entries(shared).map(([sharedModuleName, sharedModuleHints]) => ({
-        name: sharedModuleName,
-        moduleNameOrPath: sharedModuleHints?.import ? sharedModuleHints.import: sharedModuleName,
-        type: 'shared',
-      })));
+      federatedModules.push(
+        ...Object.entries(shared).map(
+          ([sharedModuleName, sharedModuleHints]) => ({
+            name: sharedModuleName,
+            moduleNameOrPath: sharedModuleHints?.import
+              ? sharedModuleHints.import
+              : sharedModuleName,
+            type: 'shared',
+          }),
+        ),
+      );
       /**
        * Exposed modules.
        */
-      federatedModules.push(...Object.entries(exposes).map(([exposedModuleName, exposedModulePath]) => ({
-        name: exposedModuleName,
-        moduleNameOrPath: exposedModulePath,
-        type: 'exposed',
-      })));
-      for (const { name, moduleNameOrPath, type } of federatedModules) {
+      federatedModules.push(
+        ...Object.entries(exposes).map(
+          ([exposedModuleName, exposedModulePath]) => ({
+            name: exposedModuleName,
+            moduleNameOrPath: exposedModulePath,
+            type: 'exposed',
+          }),
+        ),
+      );
+      /* eslint-disable-next-line no-restricted-syntax */
+      for (const { name: moduleName, moduleNameOrPath, type } of federatedModules) {
         /**
          * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
          */
+        /* eslint-disable-next-line no-await-in-loop */
         const resolvedId = await this.resolve(moduleNameOrPath);
         const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
         /**
@@ -231,10 +246,18 @@ export default function federation(federationConfig) {
           sanitizedModuleNameOrPath,
           type,
         });
-        const versionInfo = getVersionInfoForModule(moduleNameOrPath, resolvedModulePath);
-        if (!Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+        const versionInfo = getVersionInfoForModule(
+          moduleNameOrPath,
+          resolvedModulePath,
+        );
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            sharedOrExposedModuleInfo,
+            resolvedModulePath,
+          )
+        ) {
           sharedOrExposedModuleInfo[resolvedModulePath] = {
-            name,
+            name: moduleName,
             moduleNameOrPath,
             sanitizedModuleNameOrPath,
             type,
@@ -269,14 +292,15 @@ export default function federation(federationConfig) {
         importer: null,
       });
     },
-    resolveId(source, importer, options) {
+    resolveId(source) {
       /**
        * Resolve the virtual file for the remote entry manually.
        * Rest of the files are resolved natively by the default resolvers/
        */
       if (source === REMOTE_ENTRY_MODULE_ID) {
         return REMOTE_ENTRY_MODULE_ID;
-      } else if (source === FEDERATED_IMPORT_MODULE_ID) {
+      }
+      if (source === FEDERATED_IMPORT_MODULE_ID) {
         return FEDERATED_IMPORT_MODULE_ID;
       }
       return null;
@@ -311,46 +335,52 @@ export default function federation(federationConfig) {
           }
           const init = (sharedScope) => {
             setSharedScope(sharedScope);
-            ${
-              Object.entries(shared).map(([key, sharedModule]) => {
-                /**
+            ${Object.entries(shared)
+    .map(([key, sharedModule]) => {
+      /**
                  * TODO: Get the default values of these from the nearest package.json
                  */
-                const { 
-                  shareKey,
-                } = sharedModule;
-                /**
+      const { shareKey } = sharedModule;
+      /**
                  * Handle import false.
                  */
-                const importedModule = sharedModule.import ?? key;
-                const versionForSharedModule = getVersionForModule(importedModule); 
-                /**
+      const importedModule = sharedModule.import ?? key;
+      const versionForSharedModule = getVersionForModule(importedModule);
+      /**
                  * TODO: Add versioning information.
                  */
-                return importedModule ? `
-                  register(sharedScope, '${shareKey ?? key}', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
-                `: '';
-              }).join('')
-            }
+      return importedModule
+        ? `
+                  register(sharedScope, '${
+  shareKey ?? key
+}', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
+                `
+        : '';
+    })
+    .join('')}
           };
           const get = (module) => {
             switch(module) {
-              ${
-                Object.entries(exposes).map(([key, exposedModule]) => {
-                  return `
+              ${Object.entries(exposes)
+    .map(
+      ([key, exposedModule]) => `
                     case '${key}': {
                       return import('${exposedModule}');
                     }
-                  `;
-                }).join('')
-              }
+                  `,
+    )
+    .join('')}
             }
           };
           export { init, get };
         `;
         return remoteEntryCode;
-      } else if (id === FEDERATED_IMPORT_MODULE_ID) {
-        const __federatedImport__ = readFileSync(resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`), 'utf8');
+      }
+      if (id === FEDERATED_IMPORT_MODULE_ID) {
+        const __federatedImport__ = readFileSync(
+          resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`),
+          'utf8',
+        );
         return `
           export const moduleMap = ${JSON.stringify(moduleMap, null, 2)};
           ${__federatedImport__}
@@ -370,8 +400,11 @@ export default function federation(federationConfig) {
         /**
          * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
          */
-        if (id === FEDERATED_IMPORT_MODULE_ID || id === REMOTE_ENTRY_MODULE_ID) {
-          return;
+        if (
+          id === FEDERATED_IMPORT_MODULE_ID
+          || id === REMOTE_ENTRY_MODULE_ID
+        ) {
+          return null;
         }
         const self = this;
         let chunkHasFederatedImports = false;
@@ -384,28 +417,43 @@ export default function federation(federationConfig) {
              * We convert those imorts into dynamic imports.
              * What about eager ? Don't know. TBD.
              */
-            if (Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(node.type)) {
+            if (
+              Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(
+                node.type,
+              )
+            ) {
               /**
                * At this point rollup hasn't completed resolution of the import statements in this file.
                * Imports might still be relative to the current file.
                * Its crucial to call the this.resolve() with the importer (2nd arg) to actually resolve the import.
                */
               const resolvedId = await self.resolve(node.source.value, id);
-              const resolvedModulePath = getModulePathFromResolvedId(resolvedId.id);
-              if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
+              const resolvedModulePath = getModulePathFromResolvedId(
+                resolvedId.id,
+              );
+              if (
+                Object.prototype.hasOwnProperty.call(
+                  sharedOrExposedModuleInfo,
+                  resolvedModulePath,
+                )
+              ) {
                 chunkHasFederatedImports = true;
                 const chunkName = sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
                 const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
                 const federatedImportStmsStr = getFederatedImportStatementForNode(node, moduleSpecifier);
-                magicString.overwrite(node.start, node.end, federatedImportStmsStr);
+                magicString.overwrite(
+                  node.start,
+                  node.end,
+                  federatedImportStmsStr,
+                );
               }
             }
-          }
+          },
         });
-         /**
+        /**
          * The top level import of FEDERATED_IMPORT_EXPR
          */
-         if (chunkHasFederatedImports) {
+        if (chunkHasFederatedImports) {
           magicString.prepend(`
             /**
              * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
@@ -416,7 +464,7 @@ export default function federation(federationConfig) {
         return {
           code: magicString.toString(),
         };
-      }
+      },
     },
     outputOptions(outputOptions) {
       /**
@@ -426,26 +474,35 @@ export default function federation(federationConfig) {
        * So we create a manual chunk function and provide it to the output options.
        * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
        */
-      const manualChunks = (id, { getModuleInfo, getModuleIds }) => {
+      const manualChunks = (id) => {
         /**
          * This is currently a hack so that rollup doesn't generate shared chunks between the exposed module and the FEDERATED_IMPORT_MODULE_ID.
          * TODO: Find a better way to force rollup to do this.
          */
         if (id === FEDERATED_IMPORT_MODULE_ID) {
           return FEDERATED_IMPORT_MODULE_ID;
-        } else if (id === REMOTE_ENTRY_MODULE_ID) {
+        }
+        if (id === REMOTE_ENTRY_MODULE_ID) {
           return REMOTE_ENTRY_MODULE_ID;
         }
         const resolvedModulePath = getModulePathFromResolvedId(id);
-        if (Object.prototype.hasOwnProperty.call(sharedOrExposedModuleInfo, resolvedModulePath)) {
-          return getChunkNameForModule(sharedOrExposedModuleInfo[resolvedModulePath]);
+        if (
+          Object.prototype.hasOwnProperty.call(
+            sharedOrExposedModuleInfo,
+            resolvedModulePath,
+          )
+        ) {
+          return getChunkNameForModule(
+            sharedOrExposedModuleInfo[resolvedModulePath],
+          );
         }
+        return null;
       };
       return {
         ...outputOptions,
         manualChunks,
-        chunkFileNames: '[name].js'
+        chunkFileNames: '[name].js',
       };
     },
-  }
+  };
 }

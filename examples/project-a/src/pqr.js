@@ -1,1 +1,1 @@
-export const PQR = "my string PQR";
+export const PQR = 'my string PQR';

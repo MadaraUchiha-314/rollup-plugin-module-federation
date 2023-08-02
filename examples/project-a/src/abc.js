@@ -1,1 +1,1 @@
-export const ABC = "my string abc";
+export const ABC = 'my string abc';
