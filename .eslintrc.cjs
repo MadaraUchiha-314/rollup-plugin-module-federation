@@ -24,6 +24,6 @@ module.exports = {
     'no-underscore-dangle': 'off',
     'import/prefer-default-export': 'off',
     'import/extensions': 'off',
-    'max-len': 'off'
+    'max-len': 'off',
   },
 };

@@ -6,14 +6,18 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "npx prettier . --write && npx eslint src/ --fix"
+    "lint": "npx prettier . --write && npx eslint . --fix",
+    "prepare": "husky install"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MadaraUchiha-314/rollup-plugin-module-federation.git"
   },
   "keywords": [
-    "rollup-plugin"
+    "rollup-plugin",
+    "module-federation",
+    "rollup",
+    "plugin"
   ],
   "author": "Rohith R",
   "license": "MIT",
@@ -30,6 +34,7 @@
     "eslint": "^8.46.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.28.0",
+    "husky": "^8.0.3",
     "prettier": "3.0.0"
   }
 }

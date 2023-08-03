@@ -171,7 +171,11 @@ export default function federation(federationConfig) {
   const getModuleMap = () => Object.values(sharedOrExposedModuleInfo).reduce(
     (currentModuleMap, moduleInfo) => {
       const {
-        chunkPath, name: moduleName, moduleNameOrPath, type, versionInfo,
+        chunkPath,
+        name: moduleName,
+        moduleNameOrPath,
+        type,
+        versionInfo,
       } = moduleInfo;
       const {
         version, requiredVersion, singleton, strictVersion,
@@ -231,7 +235,11 @@ export default function federation(federationConfig) {
         ),
       );
       /* eslint-disable-next-line no-restricted-syntax */
-      for (const { name: moduleName, moduleNameOrPath, type } of federatedModules) {
+      for (const {
+        name: moduleName,
+        moduleNameOrPath,
+        type,
+      } of federatedModules) {
         /**
          * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
          */

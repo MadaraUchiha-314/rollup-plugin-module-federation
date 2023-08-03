@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { ABC } from './abc';
 
+/* eslint-disable no-console */
+
 export async function doSomething() {
   console.log('Inside doSomething()');
   console.log('React version is: ', React.version);
@@ -16,3 +18,5 @@ export async function doSomething() {
 }
 
 doSomething();
+
+/* eslint-enable no-console */
