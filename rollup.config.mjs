@@ -2,7 +2,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
-import copy from 'rollup-plugin-copy'
+import copy from 'rollup-plugin-copy';
 
 export default {
   input: {
@@ -23,9 +23,10 @@ export default {
     copy({
       targets: [
         {
-          src: './src/__federatedImport__.js', dest: './dist'
-        }
-      ]
-    })
+          src: './src/__federatedImport__.js',
+          dest: './dist',
+        },
+      ],
+    }),
   ],
 };
