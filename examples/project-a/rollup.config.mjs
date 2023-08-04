@@ -3,7 +3,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 
 // import federation from "@originjs/vite-plugin-federation";
-import federation from '../../src/index.js';
+import federation from 'rollup-plugin-module-federation';
 
 export default {
   output: {
@@ -26,9 +26,7 @@ export default {
       shared: {
         react: {},
         'react-dom': {},
-        uuid: {
-          // import: false,
-        },
+        uuid: {},
       },
     }),
     nodeResolve(),
