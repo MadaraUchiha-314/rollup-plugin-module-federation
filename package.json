@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-module-federation",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A rollup plugin for module federation",
   "main": "./dist/index.js",
   "type": "module",
