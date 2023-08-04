@@ -345,18 +345,9 @@ export default function federation(federationConfig) {
             setSharedScope(sharedScope);
             ${Object.entries(shared)
     .map(([key, sharedModule]) => {
-      /**
-                 * TODO: Get the default values of these from the nearest package.json
-                 */
       const { shareKey } = sharedModule;
-      /**
-                 * Handle import false.
-                 */
       const importedModule = sharedModule.import ?? key;
       const versionForSharedModule = getVersionForModule(importedModule);
-      /**
-                 * TODO: Add versioning information.
-                 */
       return importedModule
         ? `
                   register(sharedScope, '${
@@ -419,11 +410,7 @@ export default function federation(federationConfig) {
         await asyncWalk(ast, {
           async enter(node) {
             /**
-             * TODO: Check if we are statically importing any local files that are shared or exposed.
-             * We need to generate a separate chunk for those files.
-             * We cannot let rollup parse those code and inline them. So we need to take care of those imports here itself.
-             * We convert those imorts into dynamic imports.
-             * What about eager ? Don't know. TBD.
+             * TODO: What about eager ? Don't know. TBD.
              */
             if (
               Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(

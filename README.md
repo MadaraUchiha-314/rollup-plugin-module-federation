@@ -1,6 +1,6 @@
 # rollup-plugin-module-federation
 
-![Build](https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/actions/workflows/ci.yaml/badge.svg) 
+![Build](https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/actions/workflows/ci.yaml/badge.svg)
 ![Node version](https://img.shields.io/node/v/rollup-plugin-module-federation)
 ![NPM package version](https://img.shields.io/npm/v/rollup-plugin-module-federation)
 
