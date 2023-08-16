@@ -2,5 +2,5 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 if [[ ! -n "${CI}" ]]; then
-    npm run lint
+    pnpm lint
 fi
