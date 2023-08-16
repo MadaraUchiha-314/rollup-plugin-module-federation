@@ -13,5 +13,5 @@ jobs:
         with:
           node-version: 18.x
           registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
