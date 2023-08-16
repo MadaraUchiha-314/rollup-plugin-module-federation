@@ -19,8 +19,6 @@
   "scripts": {
     "build": "rm -rf dist/ && rollup --config rollup.config.mjs",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "npx prettier . --write && npx eslint . --fix",
-    "prepare": "husky install",
     "release": "semantic-release"
   },
   "repository": {
