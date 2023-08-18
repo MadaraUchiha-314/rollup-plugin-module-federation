@@ -29,4 +29,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          cd packages/rollup-plugin-module-federation && npm run release
+          cd packages/rollup-plugin-module-federation && npx semantic-release
