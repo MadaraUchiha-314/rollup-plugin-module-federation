@@ -5,7 +5,8 @@
     "node": ">= 18.0.0"
   },
   "workspaces": [
-    "packages/**"
+    "packages/rollup-plugin-module-federation",
+    "packages/examples/project-a"
   ],
   "repository": {
     "type": "git",
@@ -24,9 +25,8 @@
     "plugin"
   ],
   "scripts": {
-    "preinstall": "npx only-allow pnpm",
     "prepare": "husky install",
-    "lint": "pnpm dlx prettier . --write && pnpm dlx eslint . --fix"
+    "lint": "npx prettier . --write && npx eslint . --fix"
   },
   "devDependencies": {
     "eslint": "8.46.0",
