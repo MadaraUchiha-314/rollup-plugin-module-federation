@@ -45,12 +45,5 @@ export default {
 
 ```sh
 npm install
-```
-
-### Building `project-a`
-
-```sh
-cd examples/project-a
-npm install
-npm run build
+npm run build --workspaces --if-present
 ```
