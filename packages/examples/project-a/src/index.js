@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ABC } from './abc';
 
 export { createStore } from 'redux';
+export { applyMiddleware as kindlyApplyMiddleware } from 'redux';
 
 /* eslint-disable no-console */
 

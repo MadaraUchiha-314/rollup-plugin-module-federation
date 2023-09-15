@@ -18,6 +18,8 @@ import { PACKAGE_JSON } from './constants.js';
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
   ImportExpression: 'ImportExpression',
+  ExportNamedDeclaration: 'ExportNamedDeclaration',
+  ExportAllDeclaration: 'ExportAllDeclaration',
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
@@ -99,6 +101,14 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
        * import('pqr')
        */
       federatedImportStms.push(moduleSpecifier);
+      break;
+    }
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportNamedDeclaration: {
+      console.log(node);
+      break;
+    }
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportAllDeclaration: {
+      console.log(node);
       break;
     }
     default: {
@@ -396,6 +406,7 @@ export default function federation(federationConfig) {
       async handler(code, id) {
         const ast = this.parse(code);
         const magicString = new MagicString(code);
+        console.log(magicString.toString());
         /**
          * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
          */
@@ -415,7 +426,7 @@ export default function federation(federationConfig) {
             if (
               Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(
                 node.type,
-              )
+              ) && node?.source?.value
             ) {
               /**
                * At this point rollup hasn't completed resolution of the import statements in this file.
