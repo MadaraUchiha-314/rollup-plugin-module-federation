@@ -14,4 +14,4 @@ jobs:
           node-version: 18.x
           registry-url: 'https://registry.npmjs.org'
       - run: npm install --frozen-lockfile
-      - run: npm build --workspaces --if-present
+      - run: npm run build --workspaces --if-present
