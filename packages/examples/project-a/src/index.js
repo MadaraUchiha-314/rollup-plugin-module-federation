@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { ABC } from './abc';
 
+export { createStore } from 'redux';
+
 /* eslint-disable no-console */
 
 export async function doSomething() {
