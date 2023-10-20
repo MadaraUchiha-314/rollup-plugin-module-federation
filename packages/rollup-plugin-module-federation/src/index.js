@@ -19,7 +19,7 @@ const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
   ImportExpression: 'ImportExpression',
   ExportNamedDeclaration: 'ExportNamedDeclaration',
-  ExportAllDeclaration: 'ExportAllDeclaration',
+  // ExportAllDeclaration: 'ExportAllDeclaration',
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
@@ -104,7 +104,25 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
       break;
     }
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportNamedDeclaration: {
-      console.log(node);
+      node.specifiers.forEach((specifier) => {
+        switch(specifier.type) {
+          case 'ExportSpecifier': {
+            if (specifier.exported.name !== specifier.local.name) {
+              federatedImportStms.push(
+                `const { ${specifier.exported.name}: ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
+              );
+            } else {
+              federatedImportStms.push(
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
+              );
+            }
+            break;
+          }
+          default: {
+            throw Error(`Unsupported specifier.type: ${specifier.type}`);
+          }
+        }
+      });
       break;
     }
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportAllDeclaration: {
@@ -406,7 +424,6 @@ export default function federation(federationConfig) {
       async handler(code, id) {
         const ast = this.parse(code);
         const magicString = new MagicString(code);
-        console.log(magicString.toString());
         /**
          * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
          */
