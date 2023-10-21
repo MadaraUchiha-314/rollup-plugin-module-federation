@@ -109,7 +109,7 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
           case 'ExportSpecifier': {
             if (specifier.exported.name !== specifier.local.name) {
               federatedImportStms.push(
-                `const { ${specifier.exported.name}: ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
               );
             } else {
               federatedImportStms.push(
@@ -126,7 +126,6 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
       break;
     }
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportAllDeclaration: {
-      console.log(node);
       break;
     }
     default: {
