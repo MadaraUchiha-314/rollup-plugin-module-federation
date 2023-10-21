@@ -18,6 +18,8 @@ import { PACKAGE_JSON } from './constants.js';
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
   ImportExpression: 'ImportExpression',
+  ExportNamedDeclaration: 'ExportNamedDeclaration',
+  // ExportAllDeclaration: 'ExportAllDeclaration',
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
@@ -99,6 +101,34 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
        * import('pqr')
        */
       federatedImportStms.push(moduleSpecifier);
+      break;
+    }
+    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportNamedDeclaration: {
+      node.specifiers.forEach((specifier) => {
+        switch(specifier.type) {
+          case 'ExportSpecifier': {
+            if (specifier.exported.name !== specifier.local.name) {
+              /**
+               * export { ABC as XYZ } from 'pqr';
+               */
+              federatedImportStms.push(
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
+              );
+            } else {
+              /**
+               * export { ABC } from 'pqr';
+               */
+              federatedImportStms.push(
+                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
+              );
+            }
+            break;
+          }
+          default: {
+            throw Error(`Unsupported specifier.type: ${specifier.type}`);
+          }
+        }
+      });
       break;
     }
     default: {
@@ -415,7 +445,7 @@ export default function federation(federationConfig) {
             if (
               Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(
                 node.type,
-              )
+              ) && node?.source?.value
             ) {
               /**
                * At this point rollup hasn't completed resolution of the import statements in this file.

@@ -27,6 +27,7 @@ export default {
         react: {},
         'react-dom': {},
         uuid: {},
+        redux: {},
       },
     }),
     nodeResolve(),
