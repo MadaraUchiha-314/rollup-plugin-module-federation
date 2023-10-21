@@ -108,10 +108,16 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
         switch(specifier.type) {
           case 'ExportSpecifier': {
             if (specifier.exported.name !== specifier.local.name) {
+              /**
+               * export { ABC as XYZ } from 'pqr';
+               */
               federatedImportStms.push(
                 `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
               );
             } else {
+              /**
+               * export { ABC } from 'pqr';
+               */
               federatedImportStms.push(
                 `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
               );
@@ -123,9 +129,6 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
           }
         }
       });
-      break;
-    }
-    case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportAllDeclaration: {
       break;
     }
     default: {
