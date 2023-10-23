@@ -5,7 +5,7 @@ import replace from '@rollup/plugin-replace';
 export default {
   input: {
     index: 'src/index.js',
-    __federatedImport__: 'src/__federatedImport__.js'
+    __federatedImport__: 'src/__federatedImport__.js',
   },
   output: {
     dir: 'dist',

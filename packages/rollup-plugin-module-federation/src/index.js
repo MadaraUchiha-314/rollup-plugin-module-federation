@@ -105,7 +105,7 @@ export function getFederatedImportStatementForNode(node, moduleSpecifier) {
     }
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ExportNamedDeclaration: {
       node.specifiers.forEach((specifier) => {
-        switch(specifier.type) {
+        switch (specifier.type) {
           case 'ExportSpecifier': {
             if (specifier.exported.name !== specifier.local.name) {
               /**
@@ -445,7 +445,8 @@ export default function federation(federationConfig) {
             if (
               Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(
                 node.type,
-              ) && node?.source?.value
+              )
+              && node?.source?.value
             ) {
               /**
                * At this point rollup hasn't completed resolution of the import statements in this file.

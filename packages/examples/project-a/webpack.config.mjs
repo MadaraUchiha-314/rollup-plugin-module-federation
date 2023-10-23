@@ -1,7 +1,7 @@
 import ModuleFederationPlugin from 'webpack/lib/container/ModuleFederationPlugin.js';
 import { federationconfig } from './federation.config.js';
 
-import path from "node:path";
+import path from 'node:path';
 
 const __dirname = path.resolve('.');
 
@@ -18,7 +18,5 @@ export default {
   experiments: {
     outputModule: true,
   },
-  plugins: [
-    new ModuleFederationPlugin(federationconfig),
-  ]
+  plugins: [new ModuleFederationPlugin(federationconfig)],
 };
