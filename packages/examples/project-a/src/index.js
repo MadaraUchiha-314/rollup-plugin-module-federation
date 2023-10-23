@@ -1,6 +1,6 @@
 import React, { Component, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { ABC } from './abc';
+import { ABC } from './abc.js';
 
 export { createStore, compose } from 'redux';
 export { applyMiddleware as kindlyApplyMiddleware } from 'redux';
@@ -17,7 +17,7 @@ export async function doSomething() {
   console.log('ReactDOM version is: ', ReactDOM.version);
   console.log('A random uuid for you: ', uuidv4());
   console.log('ABC = ', ABC);
-  const { PQR } = await import('./pqr');
+  const { PQR } = await import('./pqr.js');
   console.log('PQR = ', PQR);
 }
 
