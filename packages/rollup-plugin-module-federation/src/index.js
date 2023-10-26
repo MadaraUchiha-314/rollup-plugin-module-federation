@@ -33,6 +33,7 @@ const FEDERATED_IMPORT_EXPR = '__federatedImport__';
 const FEDERATED_IMPORT_MODULE_ID = '__federatedImport__';
 const FEDERATED_IMPORT_FILE_NAME = `${FEDERATED_IMPORT_MODULE_ID}.js`;
 const FEDERATED_IMPORT_NAME = 'federatedImport';
+const FEDERATED_EAGER_SHARED = '__federated__shared__eager__';
 
 const MODULE_VERSION_UNSPECIFIED = '0.0.0';
 
@@ -359,6 +360,16 @@ export default function federation(federationConfig) {
            * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
            */
           import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
+          ${Object.entries(shared)
+    .filter(([, sharedModule]) => sharedModule?.eager ?? false)
+    .map(([key, sharedModule]) => {
+      const importedModule = sharedModule.import ?? key;
+      /**
+               * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
+               */
+      return `import * as ${FEDERATED_EAGER_SHARED}${importedModule} from '${importedModule}';`;
+    })
+    .join('')}
           function register(sharedScope, moduleNameOrPath, version, fallback) {
             if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
                 sharedScope[moduleNameOrPath] = {};
@@ -378,13 +389,21 @@ export default function federation(federationConfig) {
       const { shareKey } = sharedModule;
       const importedModule = sharedModule.import ?? key;
       const versionForSharedModule = getVersionForModule(importedModule);
-      return importedModule
-        ? `
-                  register(sharedScope, '${
+      if (importedModule) {
+        if (sharedModule?.eager) {
+          return `
+          register(sharedScope, '${
+  shareKey ?? key
+}', '${versionForSharedModule}', () => Promise.resolve(${FEDERATED_EAGER_SHARED}${importedModule}).then((module) => () => module))
+        `;
+        }
+        return `
+          register(sharedScope, '${
   shareKey ?? key
 }', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
-                `
-        : '';
+        `;
+      }
+      return '';
     })
     .join('')}
           };
