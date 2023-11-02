@@ -18,8 +18,14 @@ import { PACKAGE_JSON } from './constants.js';
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
   ImportExpression: 'ImportExpression',
-  ExportNamedDeclaration: 'ExportNamedDeclaration',
-  // ExportAllDeclaration: 'ExportAllDeclaration',
+  /**
+   * TODO: Fix the bug before uncommenting: https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/issues/16
+   */
+  /* ExportNamedDeclaration: 'ExportNamedDeclaration', */
+  /**
+   * TODO: Rollup has to first fix the bug before we can work on this: https://github.com/rollup/rollup/issues/5221
+   */
+  /* ExportAllDeclaration: 'ExportAllDeclaration', */
 };
 
 const REMOTE_ENTRY_MODULE_ID = '__remoteEntry__';
