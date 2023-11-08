@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve, dirname, sep } from 'node:path';
+import { resolve, dirname, sep, parse } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EOL } from 'node:os';
 
@@ -150,6 +150,8 @@ export default function federation(federationConfig) {
   const {
     name, filename, exposes, shared,
   } = federationConfig;
+
+  const remoteEntryFileName = filename ?? REMOTE_ENTRY_FILE_NAME;
 
   const projectRoot = resolve();
   const pkgJson = JSON.parse(
@@ -333,7 +335,7 @@ export default function federation(federationConfig) {
         type: 'chunk',
         id: REMOTE_ENTRY_MODULE_ID,
         name: name ?? REMOTE_ENTRY_NAME,
-        fileName: filename ?? REMOTE_ENTRY_FILE_NAME,
+        fileName: remoteEntryFileName,
         importer: null,
       });
     },
@@ -543,6 +545,15 @@ export default function federation(federationConfig) {
             resolvedModulePath,
           )
         ) {
+          /**
+           * Eager shared dependencies need to be bundled along with the remote entry.
+           * Currently we return null and let rollup figure out the best chunking strategy.
+           * NOTE: Providing the chunk name the same as the remote entry name doesn't work as it ends up creating multiple chunks.
+           * TODO: Raise this bug with rollup.
+           */
+          if (sharedOrExposedModuleInfo[resolvedModulePath].versionInfo.eager) {
+            return null;
+          }
           return getChunkNameForModule(
             sharedOrExposedModuleInfo[resolvedModulePath],
           );
