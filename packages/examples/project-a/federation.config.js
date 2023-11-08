@@ -7,7 +7,9 @@ export const federationconfig = {
     './index': './src/index.js',
   },
   shared: {
-    react: {},
+    react: {
+      eager: true,
+    },
     'react-dom': {},
     uuid: {},
     redux: {},
