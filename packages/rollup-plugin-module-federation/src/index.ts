@@ -237,7 +237,7 @@ export default function federation(
   const getVersionInfoForModule = (
     moduleNameOrPath: string,
     resolvedModulePath: string,
-  ) => {
+  ): ModuleVersionInfo => {
     /**
      * Check if module is shared.
      */
@@ -249,15 +249,15 @@ export default function federation(
       eager: false,
     };
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
-    const resolvedModuleVersionInPkgJson =
+    const resolvedModuleVersionInPkgJson: string =
       nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
     if (Object.prototype.hasOwnProperty.call(shared, moduleNameOrPath)) {
       const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleNameOrPath];
       return {
         ...versionInfo,
         version: resolvedModuleVersionInPkgJson,
-        requiredVersion: versionInLocalPkgJson,
-        ...shared?.[moduleNameOrPath],
+        requiredVersion: versionInLocalPkgJson ?? null,
+        ...((shared as SharedObject)?.[moduleNameOrPath] as SharedConfig),
       };
     }
     return versionInfo;

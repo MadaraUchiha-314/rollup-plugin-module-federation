@@ -11,7 +11,7 @@ export function sanitizeModuleName(name: string): string {
   return name.replace(/\.|\//g, '_');
 }
 
-export function getChunkNameForModule({ sanitizedModuleNameOrPath, type }) {
+export function getChunkNameForModule({ sanitizedModuleNameOrPath, type }: {sanitizedModuleNameOrPath: string, type: 'shared' | 'exposed'}) {
   return `__federated__${type}__${sanitizedModuleNameOrPath}`;
 }
 
