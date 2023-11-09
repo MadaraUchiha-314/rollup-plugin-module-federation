@@ -15,12 +15,23 @@ import {
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
-import type { ExportAllDeclaration, ImportDeclaration, ImportExpression, ExportNamedDeclaration, Node } from 'estree';
-import type { ModuleFederationPluginOptions, SharedObject, ExposesObject, SharedConfig } from '../types';
+import type {
+  ExportAllDeclaration,
+  ImportDeclaration,
+  ImportExpression,
+  ExportNamedDeclaration,
+  Node,
+} from 'estree';
+import type {
+  ModuleFederationPluginOptions,
+  SharedObject,
+  ExposesObject,
+  SharedConfig,
+} from '../types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
-type Nullable<T>  = T | null
+type Nullable<T> = T | null;
 
 interface ModuleVersionInfo {
   version: Nullable<string>;
@@ -34,16 +45,16 @@ interface ModuleInfo {
   name: string;
   moduleNameOrPath: string;
   sanitizedModuleNameOrPath: string;
-  type: 'exposed' | 'shared'; 
-  chunkPath: string,
-  versionInfo: ModuleVersionInfo
+  type: 'exposed' | 'shared';
+  chunkPath: string;
+  versionInfo: ModuleVersionInfo;
 }
 
 interface ModuleMapEntry {
   name: string;
   moduleNameOrPath: string;
   chunkPath: string;
-  type: 'exposed' | 'shared'; 
+  type: 'exposed' | 'shared';
   version: string;
   requiredVersion: string;
   singleton: boolean;
@@ -53,12 +64,16 @@ interface ModuleMapEntry {
 interface FederatedModule {
   name: string;
   moduleNameOrPath: string;
-  type: 'exposed' | 'shared'; 
+  type: 'exposed' | 'shared';
 }
 
 type ModuleMap = Record<string, ModuleMapEntry>;
 
-type NodesToRewrite = ImportDeclaration | ImportExpression | ExportNamedDeclaration | ExportAllDeclaration;
+type NodesToRewrite =
+  | ImportDeclaration
+  | ImportExpression
+  | ExportNamedDeclaration
+  | ExportAllDeclaration;
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -91,7 +106,10 @@ const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 const __filename: string = fileURLToPath(import.meta.url);
 const __dirname: string = dirname(__filename);
 
-export function getFederatedImportStatementForNode(node: NodesToRewrite, moduleSpecifier: string): string {
+export function getFederatedImportStatementForNode(
+  node: NodesToRewrite,
+  moduleSpecifier: string,
+): string {
   const federatedImportStms: Array<string> = [];
   /**
    * TODO: What all types of nodes need to handled here ?
@@ -191,10 +209,10 @@ export function getFederatedImportStatementForNode(node: NodesToRewrite, moduleS
   return federatedImportStmsStr;
 }
 
-export default function federation(federationConfig: ModuleFederationPluginOptions): Plugin {
-  const {
-    name, filename, exposes, shared,
-  } = federationConfig;
+export default function federation(
+  federationConfig: ModuleFederationPluginOptions,
+): Plugin {
+  const { name, filename, exposes, shared } = federationConfig;
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
@@ -216,11 +234,14 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
    * Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleNameOrPath The module name for which a version required.
    */
-  const getVersionInfoForModule = (moduleNameOrPath: string, resolvedModulePath: string) => {
+  const getVersionInfoForModule = (
+    moduleNameOrPath: string,
+    resolvedModulePath: string,
+  ) => {
     /**
      * Check if module is shared.
      */
-    const versionInfo: ModuleVersionInfo= {
+    const versionInfo: ModuleVersionInfo = {
       version: null,
       requiredVersion: null,
       strictVersion: null,
@@ -228,7 +249,8 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
       eager: false,
     };
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
-    const resolvedModuleVersionInPkgJson = nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
+    const resolvedModuleVersionInPkgJson =
+      nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
     if (Object.prototype.hasOwnProperty.call(shared, moduleNameOrPath)) {
       const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleNameOrPath];
       return {
@@ -246,41 +268,42 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
    * @param {string} moduleNameOrPath The module name for which a version required.
    * @returns
    */
-  const getVersionForModule = (moduleNameOrPath: string) => Object.values(sharedOrExposedModuleInfo).find(
-    (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-  )?.versionInfo?.version ?? null;
+  const getVersionForModule = (moduleNameOrPath: string) =>
+    Object.values(sharedOrExposedModuleInfo).find(
+      (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+    )?.versionInfo?.version ?? null;
 
   /**
    * Get the module map
    */
-  const getModuleMap: () => ModuleMap = () => Object.values(sharedOrExposedModuleInfo).reduce(
-    (currentModuleMap, moduleInfo) => {
-      const {
-        chunkPath,
-        name: moduleName,
-        moduleNameOrPath,
-        type,
-        versionInfo,
-      } = moduleInfo;
-      const {
-        version, requiredVersion, singleton, strictVersion,
-      } = versionInfo;
-      return {
-        ...currentModuleMap,
-        [chunkPath]: {
+  const getModuleMap: () => ModuleMap = () =>
+    Object.values(sharedOrExposedModuleInfo).reduce(
+      (currentModuleMap, moduleInfo) => {
+        const {
+          chunkPath,
           name: moduleName,
           moduleNameOrPath,
-          chunkPath,
           type,
-          version,
-          requiredVersion,
-          singleton,
-          strictVersion,
-        },
-      };
-    },
-    {},
-  );
+          versionInfo,
+        } = moduleInfo;
+        const { version, requiredVersion, singleton, strictVersion } =
+          versionInfo;
+        return {
+          ...currentModuleMap,
+          [chunkPath]: {
+            name: moduleName,
+            moduleNameOrPath,
+            chunkPath,
+            type,
+            version,
+            requiredVersion,
+            singleton,
+            strictVersion,
+          },
+        };
+      },
+      {},
+    );
 
   return {
     name: 'rollup-plugin-federation',
@@ -301,8 +324,8 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
           ([sharedModuleName, sharedModuleHints]): FederatedModule => ({
             name: sharedModuleName,
             moduleNameOrPath: (sharedModuleHints as SharedConfig)?.import
-              ? (sharedModuleHints as SharedConfig).import as string
-              : sharedModuleName as string,
+              ? ((sharedModuleHints as SharedConfig).import as string)
+              : (sharedModuleName as string),
             type: 'shared',
           }),
         ),
@@ -330,7 +353,9 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
          */
         /* eslint-disable-next-line no-await-in-loop */
         const resolvedId = await this.resolve(moduleNameOrPath);
-        const resolvedModulePath = getModulePathFromResolvedId(resolvedId?.id as string);
+        const resolvedModulePath = getModulePathFromResolvedId(
+          resolvedId?.id as string,
+        );
         /**
          * Use sanitized module name/path everywhere.
          */
@@ -415,15 +440,15 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
            */
           import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
           ${Object.entries(shared as SharedConfig)
-    .filter(([, sharedModule]) => sharedModule.eager ?? false)
-    .map(([key, sharedModule]) => {
-      const importedModule = sharedModule.import ?? key;
-      /**
+            .filter(([, sharedModule]) => sharedModule.eager ?? false)
+            .map(([key, sharedModule]) => {
+              const importedModule = sharedModule.import ?? key;
+              /**
                * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
                */
-      return `import * as ${FEDERATED_EAGER_SHARED}${importedModule} from '${importedModule}';`;
-    })
-    .join('')}
+              return `import * as ${FEDERATED_EAGER_SHARED}${importedModule} from '${importedModule}';`;
+            })
+            .join('')}
           function register(sharedScope, moduleNameOrPath, version, fallback) {
             if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
                 sharedScope[moduleNameOrPath] = {};
@@ -439,39 +464,40 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
           const init = (sharedScope) => {
             setSharedScope(sharedScope);
             ${Object.entries(shared as SharedConfig)
-    .map(([key, sharedModule]) => {
-      const { shareKey } = sharedModule;
-      const importedModule = sharedModule.import ?? key;
-      const versionForSharedModule = getVersionForModule(importedModule);
-      if (importedModule) {
-        if (sharedModule?.eager) {
-          return `
+              .map(([key, sharedModule]) => {
+                const { shareKey } = sharedModule;
+                const importedModule = sharedModule.import ?? key;
+                const versionForSharedModule =
+                  getVersionForModule(importedModule);
+                if (importedModule) {
+                  if (sharedModule?.eager) {
+                    return `
           register(sharedScope, '${
-  shareKey ?? key
-}', '${versionForSharedModule}', () => Promise.resolve(${FEDERATED_EAGER_SHARED}${importedModule}).then((module) => () => module))
+            shareKey ?? key
+          }', '${versionForSharedModule}', () => Promise.resolve(${FEDERATED_EAGER_SHARED}${importedModule}).then((module) => () => module))
         `;
-        }
-        return `
+                  }
+                  return `
           register(sharedScope, '${
-  shareKey ?? key
-}', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
+            shareKey ?? key
+          }', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
         `;
-      }
-      return '';
-    })
-    .join('')}
+                }
+                return '';
+              })
+              .join('')}
           };
           const get = (module) => {
             switch(module) {
               ${Object.entries(exposes as ExposesObject)
-    .map(
-      ([key, exposedModule]) => `
+                .map(
+                  ([key, exposedModule]) => `
                     case '${key}': {
                       return import('${exposedModule}');
                     }
                   `,
-    )
-    .join('')}
+                )
+                .join('')}
             }
           };
           export { init, get };
@@ -503,8 +529,8 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
          * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
          */
         if (
-          id === FEDERATED_IMPORT_MODULE_ID
-          || id === REMOTE_ENTRY_MODULE_ID
+          id === FEDERATED_IMPORT_MODULE_ID ||
+          id === REMOTE_ENTRY_MODULE_ID
         ) {
           return null;
         }
@@ -518,9 +544,9 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
             if (
               Object.keys(IMPORTS_TO_FEDERATED_IMPORTS_NODES).includes(
                 node.type,
-              )
+              ) &&
               // @ts-ignore
-              && node?.source?.value 
+              node?.source?.value
             ) {
               /**
                * At this point rollup hasn't completed resolution of the import statements in this file.
@@ -539,9 +565,14 @@ export default function federation(federationConfig: ModuleFederationPluginOptio
                 )
               ) {
                 chunkHasFederatedImports = true;
-                const chunkName = sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
+                const chunkName =
+                  sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
                 const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
-                const federatedImportStmsStr = getFederatedImportStatementForNode(node as NodesToRewrite, moduleSpecifier);
+                const federatedImportStmsStr =
+                  getFederatedImportStatementForNode(
+                    node as NodesToRewrite,
+                    moduleSpecifier,
+                  );
                 magicString.overwrite(
                   (node as AcornNode).start,
                   (node as AcornNode).end,
