@@ -1,12 +1,13 @@
 import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
+import type { PackageJson } from 'type-fest';
 
-export function getModulePathFromResolvedId(id) {
+export function getModulePathFromResolvedId(id: string): string {
   return id.split('?')[0];
 }
 
-export function sanitizeModuleName(name) {
+export function sanitizeModuleName(name: string): string {
   return name.replace(/\.|\//g, '_');
 }
 
@@ -14,11 +15,11 @@ export function getChunkNameForModule({ sanitizedModuleNameOrPath, type }) {
   return `__federated__${type}__${sanitizedModuleNameOrPath}`;
 }
 
-export function getFileNameFromChunkName(chunkName) {
+export function getFileNameFromChunkName(chunkName: string): string {
   return `.${sep}${chunkName}.js`;
 }
 
-export function getNearestPackageJson(path) {
+export function getNearestPackageJson(path: string): PackageJson | null {
   const dir = lstatSync(path).isFile() ? dirname(path) : path;
   const pkgJsonPath = `${dir}${sep}${PACKAGE_JSON}`;
   if (existsSync(pkgJsonPath)) {

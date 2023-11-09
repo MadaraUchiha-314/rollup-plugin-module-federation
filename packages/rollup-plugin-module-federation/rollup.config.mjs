@@ -1,10 +1,11 @@
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
+import typescript from '@rollup/plugin-typescript';
 
 export default {
   input: {
-    index: 'src/index.js',
+    index: 'src/index.ts',
     __federatedImport__: 'src/__federatedImport__.js',
   },
   output: {
@@ -12,6 +13,7 @@ export default {
     format: 'es',
   },
   plugins: [
+    typescript(),
     replace({
       'process.env.NODE_ENV': JSON.stringify('production'),
       preventAssignment: true,
