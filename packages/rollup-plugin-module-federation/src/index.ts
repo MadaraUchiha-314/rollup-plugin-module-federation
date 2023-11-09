@@ -34,8 +34,8 @@ import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 type Nullable<T> = T | null;
 
 interface ModuleVersionInfo {
-  version: Nullable<string>;
-  requiredVersion: Nullable<string>;
+  version: Nullable<string> | false;
+  requiredVersion: Nullable<string> | false;
   strictVersion: Nullable<boolean>;
   singleton: Nullable<boolean>;
   eager: Nullable<boolean>;
@@ -251,6 +251,7 @@ export default function federation(
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
     const resolvedModuleVersionInPkgJson: string =
       nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
+    
     if (Object.prototype.hasOwnProperty.call(shared, moduleNameOrPath)) {
       const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleNameOrPath];
       return {
