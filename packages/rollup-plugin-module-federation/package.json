@@ -14,7 +14,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "types"
   ],
   "scripts": {
     "build": "rm -rf dist/ && rollup --config rollup.config.mjs",
@@ -73,6 +74,11 @@
     "@semantic-release/git": "10.0.1",
     "rollup": "3.23.0",
     "rollup-plugin-copy": "3.4.0",
-    "semantic-release": "21.0.7"
+    "semantic-release": "21.0.7",
+    "@rollup/plugin-typescript": "11.1.5",
+    "typescript": "5.2.2",
+    "tslib": "2.6.2",
+    "@types/estree": "1.0.5",
+    "type-fest": "4.7.0"
   }
 }
