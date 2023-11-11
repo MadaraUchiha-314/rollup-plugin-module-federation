@@ -38,6 +38,10 @@
 
       console.log('calling doSomething() from the exposed module ./index');
       await index.doSomething();
+
+      console.log("doing container.get('./pqr')");
+      const pqr = (await container.get('./pqr'))();
+      console.log('exposed module ./pqr', pqr);
     </script>
   </head>
   <body>
