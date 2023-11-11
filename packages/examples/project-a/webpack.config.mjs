@@ -20,7 +20,15 @@ export default {
     outputModule: true,
   },
   plugins: [
-    new ModuleFederationPlugin(federationconfig),
+    new ModuleFederationPlugin({
+      ...federationconfig,
+      /**
+       * Additional stuff for webpack.
+       */
+      library: {
+        type: 'module'
+      }
+    }),
     new CopyPlugin({
       patterns: [{ from: 'public/index.html' }],
     }),
