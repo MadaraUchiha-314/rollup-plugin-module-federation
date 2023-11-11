@@ -35,6 +35,13 @@
       console.log("doing container.get('./index')");
       const index = (await container.get('./index'))();
       console.log('exposed module ./index', index);
+
+      console.log('calling doSomething() from the exposed module ./index');
+      await index.doSomething();
+
+      console.log("doing container.get('./pqr')");
+      const pqr = (await container.get('./pqr'))();
+      console.log('exposed module ./pqr', pqr);
     </script>
   </head>
   <body>
