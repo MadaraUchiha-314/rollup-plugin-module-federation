@@ -27,7 +27,7 @@ export async function doSomething() {
     ReactDOM,
     uuidv4,
     ABC,
-    PQR
+    PQR,
   };
 }
 
