@@ -1,14 +1,14 @@
 {
-    "compilerOptions": {
-      "target": "esnext",
-      "module": "ESNext",
-      "moduleResolution": "Bundler",
-      "strict": true,
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true,
-      "noImplicitAny": true
-    },
-    "$schema": "https://json.schemastore.org/tsconfig",
-    "display": "Recommended"
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": true
+  },
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Recommended"
 }
