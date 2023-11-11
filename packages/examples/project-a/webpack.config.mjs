@@ -26,8 +26,8 @@ export default {
        * Additional stuff for webpack.
        */
       library: {
-        type: 'module'
-      }
+        type: 'module',
+      },
     }),
     new CopyPlugin({
       patterns: [{ from: 'public/index.html' }],
