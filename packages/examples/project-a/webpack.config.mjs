@@ -1,3 +1,4 @@
+import CopyPlugin from 'copy-webpack-plugin';
 import ModuleFederationPlugin from 'webpack/lib/container/ModuleFederationPlugin.js';
 import { federationconfig } from './federation.config.js';
 
@@ -18,5 +19,12 @@ export default {
   experiments: {
     outputModule: true,
   },
-  plugins: [new ModuleFederationPlugin(federationconfig)],
+  plugins: [
+    new ModuleFederationPlugin(federationconfig),
+    new CopyPlugin({
+      patterns: [
+        { from: "public/index.html" },
+      ],
+    }),
+  ],
 };
