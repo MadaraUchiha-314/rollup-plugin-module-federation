@@ -1,14 +1,18 @@
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
-import { federationconfig } from './federation.config.js';
+import copy from 'rollup-plugin-copy';
 
 // import federation from '@originjs/vite-plugin-federation';
 import federation from 'rollup-plugin-module-federation';
 
+import { federationconfig } from './federation.config.js';
+
+const outputDir = 'dist/rollup';
+
 export default {
   output: {
-    dir: 'dist/rollup',
+    dir: outputDir,
     format: 'es',
   },
   plugins: [
@@ -19,5 +23,13 @@ export default {
     federation(federationconfig),
     nodeResolve(),
     commonjs(),
+    copy({
+      targets: [
+        {
+          src: './public/index.html',
+          dest: outputDir,
+        },
+      ],
+    }),
   ],
 };

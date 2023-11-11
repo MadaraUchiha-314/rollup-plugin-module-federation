@@ -251,7 +251,7 @@ export default function federation(
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
     const resolvedModuleVersionInPkgJson: string =
       nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
-    
+
     if (Object.prototype.hasOwnProperty.call(shared, moduleNameOrPath)) {
       const versionInLocalPkgJson = pkgJson?.dependencies?.[moduleNameOrPath];
       return {
@@ -494,7 +494,7 @@ export default function federation(
                 .map(
                   ([key, exposedModule]) => `
                     case '${key}': {
-                      return import('${exposedModule}');
+                      return import('${exposedModule}').then((module) => () => module);
                     }
                   `,
                 )
