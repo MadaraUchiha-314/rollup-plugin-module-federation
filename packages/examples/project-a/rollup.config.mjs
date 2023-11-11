@@ -28,8 +28,8 @@ export default {
         {
           src: './public/index.html',
           dest: outputDir,
-        }
-      ]
+        },
+      ],
     }),
   ],
 };

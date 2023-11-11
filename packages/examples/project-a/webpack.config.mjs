@@ -22,9 +22,7 @@ export default {
   plugins: [
     new ModuleFederationPlugin(federationconfig),
     new CopyPlugin({
-      patterns: [
-        { from: "public/index.html" },
-      ],
+      patterns: [{ from: 'public/index.html' }],
     }),
   ],
 };
