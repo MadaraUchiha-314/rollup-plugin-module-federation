@@ -494,7 +494,7 @@ export default function federation(
                 .map(
                   ([key, exposedModule]) => `
                     case '${key}': {
-                      return () => import('${exposedModule}');
+                      return import('${exposedModule}').then((module) => () => module);
                     }
                   `,
                 )
