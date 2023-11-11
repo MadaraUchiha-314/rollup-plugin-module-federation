@@ -19,8 +19,16 @@ export async function doSomething() {
   console.log('ABC = ', ABC);
   const { PQR } = await import('./pqr.js');
   console.log('PQR = ', PQR);
-}
 
-doSomething();
+  return {
+    React,
+    Component,
+    useMemo,
+    ReactDOM,
+    uuidv4,
+    ABC,
+    PQR
+  };
+}
 
 /* eslint-enable no-console */

@@ -35,6 +35,9 @@
       console.log("doing container.get('./index')");
       const index = (await container.get('./index'))();
       console.log('exposed module ./index', index);
+
+      console.log("calling doSomething() from the exposed module ./index");
+      await index.doSomething();
     </script>
   </head>
   <body>
