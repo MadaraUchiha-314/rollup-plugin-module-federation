@@ -6,7 +6,6 @@ import type { PackageJson } from 'type-fest';
 import type { Shared } from '../types';
 import type { SharedObject } from './types';
 
-
 export function getModulePathFromResolvedId(id: string): string {
   return id.split('?')[0];
 }
@@ -42,42 +41,54 @@ export function getNearestPackageJson(path: string): PackageJson | null {
   return getNearestPackageJson(parentDir);
 }
 
-export function getSharedConfig(shared: Shared): SharedObject  {
+export function getSharedConfig(shared: Shared): SharedObject {
   if (Array.isArray(shared)) {
-    return shared.reduce<SharedObject>((sharedObject, sharedEntity): SharedObject => {
-      if (typeof sharedEntity === 'string') {
-        return {
-          ...sharedObject,
-          [sharedEntity]: {
-            import: sharedEntity,
-          },
-        };
-      } else if (typeof sharedEntity === 'object') {
-        return {
-          ...sharedObject,
-          ...(sharedEntity as SharedObject),
-        };
-      } else {
-        throw Error('Could not parse item shared object[]. Item is: ', sharedEntity);
-      }
-    }, {});
-  } else {
-    return Object.entries(shared).reduce<SharedObject>((sharedObject, [key, sharedEntity]): SharedObject => {
-      if (typeof sharedEntity === 'string') {
-        return {
-          ...sharedObject,
-          [key]: {
-            import: sharedEntity,
-          }
-        };
-      } else if (typeof sharedEntity === 'object') {
-        return {
-          ...sharedObject,
-          [key]: sharedEntity,
+    return shared.reduce<SharedObject>(
+      (sharedObject, sharedEntity): SharedObject => {
+        if (typeof sharedEntity === 'string') {
+          return {
+            ...sharedObject,
+            [sharedEntity]: {
+              import: sharedEntity,
+            },
+          };
+        } else if (typeof sharedEntity === 'object') {
+          return {
+            ...sharedObject,
+            ...(sharedEntity as SharedObject),
+          };
+        } else {
+          throw Error(
+            'Could not parse item shared object[]. Item is: ',
+            sharedEntity,
+          );
         }
-      } else {
-        throw Error('Could not parse item shared object{}. Item is: ', sharedEntity);
-      }
-    }, {});
+      },
+      {},
+    );
+  } else {
+    return Object.entries(shared).reduce<SharedObject>(
+      (sharedObject, [key, sharedEntity]): SharedObject => {
+        if (typeof sharedEntity === 'string') {
+          return {
+            ...sharedObject,
+            [key]: {
+              import: sharedEntity,
+            },
+          };
+        } else if (typeof sharedEntity === 'object') {
+          return {
+            ...sharedObject,
+            [key]: sharedEntity,
+          };
+        } else {
+          throw Error(
+            'Could not parse item shared object{}. Item is: ',
+            sharedEntity,
+          );
+        }
+      },
+      {},
+    );
   }
 }

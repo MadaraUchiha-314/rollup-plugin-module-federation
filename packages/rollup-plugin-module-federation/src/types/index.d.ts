@@ -1,6 +1,5 @@
-import { SharedConfig } from "../../types";
+import { SharedConfig } from '../../types';
 
 export declare interface SharedObject {
-    [index: string]: SharedConfig;
+  [index: string]: SharedConfig;
 }
-  
