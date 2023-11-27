@@ -12,6 +12,7 @@ import {
   getChunkNameForModule,
   getNearestPackageJson,
   getFileNameFromChunkName,
+  getSharedConfig,
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
@@ -24,10 +25,11 @@ import type {
 } from 'estree';
 import type {
   ModuleFederationPluginOptions,
-  SharedObject,
   ExposesObject,
   SharedConfig,
+  Shared,
 } from '../types';
+import type { SharedObject } from './types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
@@ -212,7 +214,10 @@ export function getFederatedImportStatementForNode(
 export default function federation(
   federationConfig: ModuleFederationPluginOptions,
 ): Plugin {
-  const { name, filename, exposes, shared } = federationConfig;
+  const { name, filename } = federationConfig;
+  let { shared, exposes } = federationConfig;
+
+  shared = getSharedConfig(shared as Shared);
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
