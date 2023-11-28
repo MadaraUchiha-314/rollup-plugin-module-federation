@@ -3,8 +3,8 @@ import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
 
 import type { PackageJson } from 'type-fest';
-import type { Shared } from '../types';
-import type { SharedObject } from './types';
+import type { Exposes, Shared } from '../types';
+import type { SharedObject, ExposesObject } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
   return id.split('?')[0];
@@ -55,7 +55,7 @@ export function getSharedConfig(shared: Shared): SharedObject {
         } else if (typeof sharedEntity === 'object') {
           return {
             ...sharedObject,
-            ...(sharedEntity as SharedObject),
+            ...getSharedConfig(sharedEntity),
           };
         } else {
           throw Error(
@@ -90,5 +90,55 @@ export function getSharedConfig(shared: Shared): SharedObject {
       },
       {},
     );
+  }
+}
+
+
+export function getExposesConfig(exposes: Exposes): ExposesObject {
+  if (Array.isArray(exposes)) {
+    return exposes.reduce<ExposesObject>((exposedModules, exposedEntity): ExposesObject => {
+      if (typeof exposedEntity === 'string') {
+        return {
+          ...exposedModules,
+          [exposedEntity]: {
+            import: exposedEntity,
+          },
+        };
+      } else if (typeof exposedEntity === 'object') {
+        return {
+          ...exposedModules,
+          ...getExposesConfig(exposedEntity),
+        };
+      } else {
+        throw Error(
+          'Could not parse item shared object[]. Item is: ',
+          exposedEntity,
+        );
+      }
+    }, {});
+  } else {
+    return Object.entries(exposes).reduce<ExposesObject>((exposedModules, [key, exposedEntity]): ExposesObject => {
+      if (typeof exposedEntity === 'string') {
+        return {
+          ...exposedModules,
+          [key]: {
+            import: exposedEntity,
+          },
+        };
+      } else if (Array.isArray(exposedEntity)) {
+        throw Error('Specifying an array as an entrypoint for exposed modules is not supported yet');
+      }
+      else if (typeof exposedEntity === 'object') {
+        return {
+          ...exposedModules,
+          [key]: exposedEntity,
+        };
+      } else {
+        throw Error(
+          'Could not parse item exposed object{}. Item is: ',
+          exposedEntity,
+        );
+      }
+    }, {});
   }
 }

@@ -13,6 +13,7 @@ import {
   getNearestPackageJson,
   getFileNameFromChunkName,
   getSharedConfig,
+  getExposesConfig,
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
@@ -25,11 +26,9 @@ import type {
 } from 'estree';
 import type {
   ModuleFederationPluginOptions,
-  ExposesObject,
   SharedConfig,
-  Shared,
 } from '../types';
-import type { SharedObject } from './types';
+import type { SharedObject, ExposesObject } from './types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
@@ -217,7 +216,9 @@ export default function federation(
   const { name, filename } = federationConfig;
   let { shared, exposes } = federationConfig;
 
-  shared = getSharedConfig(shared as Shared);
+  shared = getSharedConfig(shared || {}) as SharedObject;
+
+  exposes = getExposesConfig(exposes || {}) as ExposesObject;
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
@@ -263,7 +264,7 @@ export default function federation(
         ...versionInfo,
         version: resolvedModuleVersionInPkgJson,
         requiredVersion: versionInLocalPkgJson ?? null,
-        ...((shared as SharedObject)?.[moduleNameOrPath] as SharedConfig),
+        ...((shared)?.[moduleNameOrPath]),
       };
     }
     return versionInfo;
@@ -326,12 +327,12 @@ export default function federation(
        * If a module is both shared and exposed, we treat it as shared.
        */
       federatedModules.push(
-        ...Object.entries(shared as SharedObject).map(
+        ...Object.entries(shared).map(
           ([sharedModuleName, sharedModuleHints]): FederatedModule => ({
             name: sharedModuleName,
-            moduleNameOrPath: (sharedModuleHints as SharedConfig)?.import
-              ? ((sharedModuleHints as SharedConfig).import as string)
-              : (sharedModuleName as string),
+            moduleNameOrPath: (sharedModuleHints)?.import
+              ? ((sharedModuleHints).import)
+              : (sharedModuleName),
             type: 'shared',
           }),
         ),
@@ -340,10 +341,10 @@ export default function federation(
        * Exposed modules.
        */
       federatedModules.push(
-        ...Object.entries(exposes as ExposesObject).map(
+        ...Object.entries(exposes).map(
           ([exposedModuleName, exposedModulePath]): FederatedModule => ({
             name: exposedModuleName,
-            moduleNameOrPath: exposedModulePath as string,
+            moduleNameOrPath: exposedModulePath.import,
             type: 'exposed',
           }),
         ),
@@ -445,7 +446,7 @@ export default function federation(
            * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
            */
           import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
-          ${Object.entries(shared as SharedConfig)
+          ${Object.entries(shared)
             .filter(([, sharedModule]) => sharedModule.eager ?? false)
             .map(([key, sharedModule]) => {
               const importedModule = sharedModule.import ?? key;
@@ -469,7 +470,7 @@ export default function federation(
           }
           const init = (sharedScope) => {
             setSharedScope(sharedScope);
-            ${Object.entries(shared as SharedConfig)
+            ${Object.entries(shared)
               .map(([key, sharedModule]) => {
                 const { shareKey } = sharedModule;
                 const importedModule = sharedModule.import ?? key;
@@ -495,7 +496,7 @@ export default function federation(
           };
           const get = (module) => {
             switch(module) {
-              ${Object.entries(exposes as ExposesObject)
+              ${Object.entries(exposes)
                 .map(
                   ([key, exposedModule]) => `
                     case '${key}': {
