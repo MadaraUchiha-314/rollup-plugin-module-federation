@@ -2,12 +2,8 @@ export const federationconfig = {
   name: 'rr_random_package',
   filename: 'my-remote-entry.js',
   exposes: {
-    './react': {
-      import: 'react',
-    },
-    './pqr': {
-      import: './src/pqr.js',
-    },
+    './react': 'react',
+    './pqr': './src/pqr.js',
     './index': {
       import: './src/index.js',
     },
