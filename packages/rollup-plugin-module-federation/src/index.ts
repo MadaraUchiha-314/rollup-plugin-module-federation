@@ -24,10 +24,7 @@ import type {
   ExportNamedDeclaration,
   Node,
 } from 'estree';
-import type {
-  ModuleFederationPluginOptions,
-  SharedConfig,
-} from '../types';
+import type { ModuleFederationPluginOptions, SharedConfig } from '../types';
 import type { SharedObject, ExposesObject } from './types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
@@ -263,7 +260,7 @@ export default function federation(
         ...versionInfo,
         version: resolvedModuleVersionInPkgJson,
         requiredVersion: versionInLocalPkgJson ?? null,
-        ...((shared)?.[moduleNameOrPath]),
+        ...shared?.[moduleNameOrPath],
       };
     }
     return versionInfo;
@@ -329,9 +326,9 @@ export default function federation(
         ...Object.entries(shared).map(
           ([sharedModuleName, sharedModuleHints]): FederatedModule => ({
             name: sharedModuleName,
-            moduleNameOrPath: (sharedModuleHints)?.import
-              ? ((sharedModuleHints).import)
-              : (sharedModuleName),
+            moduleNameOrPath: sharedModuleHints?.import
+              ? sharedModuleHints.import
+              : sharedModuleName,
             type: 'shared',
           }),
         ),
@@ -478,7 +475,7 @@ export default function federation(
                 const importedModule = sharedModule.import ?? key;
                 if (importedModule) {
                   const versionForSharedModule =
-                  getVersionForModule(importedModule);
+                    getVersionForModule(importedModule);
                   if (sharedModule?.eager) {
                     return `
           register(sharedScope, '${
