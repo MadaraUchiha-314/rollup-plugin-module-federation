@@ -90,7 +90,7 @@ export declare interface ExposesObject {
   [index: string]: string | ExposesConfig | string[];
 }
 
-type Remotes = (string | RemotesObject)[] | RemotesObject;
+export type Remotes = (string | RemotesObject)[] | RemotesObject;
 
 /**
  * Advanced configuration for container locations from which modules should be resolved and loaded at runtime.
@@ -114,7 +114,7 @@ export declare interface RemotesObject {
   [index: string]: string | RemotesConfig | string[];
 }
 
-type Shared = (string | SharedObject)[] | SharedObject;
+export type Shared = (string | SharedObject)[] | SharedObject;
 
 /**
  * Advanced configuration for modules that should be shared in the share scope.

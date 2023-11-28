@@ -4,7 +4,9 @@ export const federationconfig = {
   exposes: {
     './react': 'react',
     './pqr': './src/pqr.js',
-    './index': './src/index.js',
+    './index': {
+      import: './src/index.js',
+    },
   },
   shared: {
     react: {
