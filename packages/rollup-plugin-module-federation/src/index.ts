@@ -214,11 +214,10 @@ export default function federation(
   federationConfig: ModuleFederationPluginOptions,
 ): Plugin {
   const { name, filename } = federationConfig;
-  let { shared, exposes } = federationConfig;
 
-  shared = getSharedConfig(shared || {}) as SharedObject;
+  const shared = getSharedConfig(federationConfig.shared || {});
 
-  exposes = getExposesConfig(exposes || {}) as ExposesObject;
+  const exposes = getExposesConfig(federationConfig.exposes || {});
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
@@ -344,7 +343,10 @@ export default function federation(
         ...Object.entries(exposes).map(
           ([exposedModuleName, exposedModulePath]): FederatedModule => ({
             name: exposedModuleName,
-            moduleNameOrPath: exposedModulePath.import,
+            /**
+             * TODO: We don't current support that import be an array. What does that even mean ? Need further clarification.
+             */
+            moduleNameOrPath: exposedModulePath.import as string,
             type: 'exposed',
           }),
         ),
@@ -474,9 +476,9 @@ export default function federation(
               .map(([key, sharedModule]) => {
                 const { shareKey } = sharedModule;
                 const importedModule = sharedModule.import ?? key;
-                const versionForSharedModule =
-                  getVersionForModule(importedModule);
                 if (importedModule) {
+                  const versionForSharedModule =
+                  getVersionForModule(importedModule);
                   if (sharedModule?.eager) {
                     return `
           register(sharedScope, '${
@@ -500,7 +502,7 @@ export default function federation(
                 .map(
                   ([key, exposedModule]) => `
                     case '${key}': {
-                      return import('${exposedModule}').then((module) => () => module);
+                      return import('${exposedModule.import}').then((module) => () => module);
                     }
                   `,
                 )
