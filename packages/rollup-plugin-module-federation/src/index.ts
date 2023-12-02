@@ -272,7 +272,7 @@ export default function federation(
     /**
      * If its a remote module, then there's no notion of versions.
      */
-    if (type === 'remote') {
+    if (type === FederatedModuleType.REMOTE) {
       return versionInfo;
     }
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
