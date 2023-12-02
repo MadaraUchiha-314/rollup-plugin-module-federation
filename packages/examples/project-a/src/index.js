@@ -5,6 +5,8 @@ import { ABC } from './abc.js';
 export { createStore, compose } from 'redux';
 export { applyMiddleware as kindlyApplyMiddleware } from 'redux';
 
+import Button from 'project-b/Button';
+
 /* eslint-disable no-console */
 
 export async function doSomething() {
@@ -19,6 +21,8 @@ export async function doSomething() {
   console.log('ABC = ', ABC);
   const { PQR } = await import('./pqr.js');
   console.log('PQR = ', PQR);
+
+  console.log(Button);
 
   return {
     React,

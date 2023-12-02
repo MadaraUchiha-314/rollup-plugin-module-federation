@@ -14,6 +14,7 @@ import {
   getFileNameFromChunkName,
   getSharedConfig,
   getExposesConfig,
+  getRemotesConfig
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
@@ -24,8 +25,7 @@ import type {
   ExportNamedDeclaration,
   Node,
 } from 'estree';
-import type { ModuleFederationPluginOptions, SharedConfig } from '../types';
-import type { SharedObject, ExposesObject } from './types';
+import type { ModuleFederationPluginOptions } from '../types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
@@ -39,11 +39,13 @@ interface ModuleVersionInfo {
   eager: Nullable<boolean>;
 }
 
+type FederatedModuleType = 'exposed' | 'shared' | 'remote';
+
 interface ModuleInfo {
   name: string;
   moduleNameOrPath: string;
   sanitizedModuleNameOrPath: string;
-  type: 'exposed' | 'shared';
+  type: FederatedModuleType;
   chunkPath: string;
   versionInfo: ModuleVersionInfo;
 }
@@ -52,7 +54,7 @@ interface ModuleMapEntry {
   name: string;
   moduleNameOrPath: string;
   chunkPath: string;
-  type: 'exposed' | 'shared';
+  type: FederatedModuleType;
   version: string;
   requiredVersion: string;
   singleton: boolean;
@@ -62,7 +64,7 @@ interface ModuleMapEntry {
 interface FederatedModule {
   name: string;
   moduleNameOrPath: string;
-  type: 'exposed' | 'shared';
+  type: FederatedModuleType;
 }
 
 type ModuleMap = Record<string, ModuleMapEntry>;
@@ -216,6 +218,8 @@ export default function federation(
 
   const exposes = getExposesConfig(federationConfig.exposes || {});
 
+  const remotes = getRemotesConfig(federationConfig.remotes || {});
+
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
   const projectRoot = resolve();
@@ -239,6 +243,7 @@ export default function federation(
   const getVersionInfoForModule = (
     moduleNameOrPath: string,
     resolvedModulePath: string,
+    type: FederatedModuleType,
   ): ModuleVersionInfo => {
     /**
      * Check if module is shared.
@@ -250,6 +255,12 @@ export default function federation(
       singleton: null,
       eager: false,
     };
+    /**
+     * If its a remote module, then there's no notion of versions.
+     */
+    if (type === 'remote') {
+      return versionInfo;
+    }
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
     const resolvedModuleVersionInPkgJson: string =
       nearestPkgJson?.version ?? MODULE_VERSION_UNSPECIFIED;
@@ -348,6 +359,17 @@ export default function federation(
           }),
         ),
       );
+      /**
+       * Remote modules.
+       */
+      federatedModules.push(
+        ...Object.entries(remotes).map(
+          ([remoteName, remoteEntity]): FederatedModule => ({
+            name: remoteName,
+            moduleNameOrPath: remoteEntity.external as string,
+            type: 'remote'
+        }))
+      );
       /* eslint-disable-next-line no-restricted-syntax */
       for (const {
         name: moduleName,
@@ -373,6 +395,7 @@ export default function federation(
         const versionInfo = getVersionInfoForModule(
           moduleNameOrPath,
           resolvedModulePath,
+          type,
         );
         if (
           !Object.prototype.hasOwnProperty.call(
@@ -426,6 +449,18 @@ export default function federation(
       }
       if (source === FEDERATED_IMPORT_MODULE_ID) {
         return FEDERATED_IMPORT_MODULE_ID;
+      }
+      /**
+       * Check all the remote modules.
+       * For remote modules, we just resolve it to the whatever the import was.
+       */
+      for (const remoteName in remotes) {
+        if (source.startsWith(`${remoteName}@`)) {
+          return {
+            id: source,
+            external: true,
+          };
+        }
       }
       return null;
     },

@@ -8,6 +8,11 @@ export const federationconfig = {
       import: './src/index.js',
     },
   },
+  remotes: {
+    'project-b': {
+      external: 'project-b@https://example.com/my-remote-entry.js',
+    }
+  },
   shared: {
     react: {
       eager: true,
