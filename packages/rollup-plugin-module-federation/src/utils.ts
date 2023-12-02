@@ -18,7 +18,7 @@ export function getChunkNameForModule({
   sanitizedModuleNameOrPath,
   type,
 }: {
-  sanitizedModuleNameOrPath: string;
+  sanitizedModuleNameOrPath: string | null;
   type: 'shared' | 'exposed' | 'remote';
 }) {
   return `__federated__${type}__${sanitizedModuleNameOrPath}`;

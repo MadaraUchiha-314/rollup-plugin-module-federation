@@ -20,4 +20,3 @@ export declare interface ExposesObject {
 export declare interface RemotesObject {
   [index: string]: RemotesConfig;
 }
-

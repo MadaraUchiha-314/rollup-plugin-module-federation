@@ -14,7 +14,7 @@ import {
   getFileNameFromChunkName,
   getSharedConfig,
   getExposesConfig,
-  getRemotesConfig
+  getRemotesConfig,
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
@@ -39,26 +39,40 @@ interface ModuleVersionInfo {
   eager: Nullable<boolean>;
 }
 
-type FederatedModuleType = 'exposed' | 'shared' | 'remote';
+enum FederatedModuleType {
+  REMOTE = 'remote',
+  EXPOSED = 'exposed',
+  SHARED = 'shared',
+}
 
-interface ModuleInfo {
+interface BaseModuleInfo {
   name: string;
   moduleNameOrPath: string;
-  sanitizedModuleNameOrPath: string;
+  sanitizedModuleNameOrPath: string | null;
   type: FederatedModuleType;
+}
+
+interface RemoteModuleInfo extends BaseModuleInfo {
+  type: FederatedModuleType.REMOTE;
+}
+
+interface SharedOrExposedModuleInfo extends BaseModuleInfo {
   chunkPath: string;
   versionInfo: ModuleVersionInfo;
+  type: FederatedModuleType.SHARED | FederatedModuleType.EXPOSED;
 }
+
+type FederatedModuleInfo = SharedOrExposedModuleInfo | RemoteModuleInfo;
 
 interface ModuleMapEntry {
   name: string;
   moduleNameOrPath: string;
-  chunkPath: string;
+  chunkPath: string | null;
   type: FederatedModuleType;
-  version: string;
-  requiredVersion: string;
-  singleton: boolean;
-  strictVersion: boolean;
+  version: string | null;
+  requiredVersion: string | null;
+  singleton: boolean | null;
+  strictVersion: boolean | null;
 }
 
 interface FederatedModule {
@@ -229,7 +243,7 @@ export default function federation(
   /**
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
-  const sharedOrExposedModuleInfo: Record<string, ModuleInfo> = {};
+  const federatedModuleInfo: Record<string, FederatedModuleInfo> = {};
   /**
    * Module Map cache
    */
@@ -283,23 +297,31 @@ export default function federation(
    * @returns
    */
   const getVersionForModule = (moduleNameOrPath: string) =>
-    Object.values(sharedOrExposedModuleInfo).find(
-      (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-    )?.versionInfo?.version ?? null;
+    (
+      Object.values(federatedModuleInfo).find(
+        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+      ) as SharedOrExposedModuleInfo
+    ).versionInfo.version ?? null;
 
   /**
    * Get the module map
    */
   const getModuleMap: () => ModuleMap = () =>
-    Object.values(sharedOrExposedModuleInfo).reduce(
+    Object.values(federatedModuleInfo).reduce(
       (currentModuleMap, moduleInfo) => {
-        const {
-          chunkPath,
-          name: moduleName,
-          moduleNameOrPath,
-          type,
-          versionInfo,
-        } = moduleInfo;
+        const { name: moduleName, moduleNameOrPath, type } = moduleInfo;
+        if (type === FederatedModuleType.REMOTE) {
+          return {
+            ...currentModuleMap,
+            [moduleName]: {
+              name: moduleName,
+              moduleNameOrPath,
+              type,
+            },
+          };
+        }
+        const { chunkPath, versionInfo } =
+          moduleInfo as SharedOrExposedModuleInfo;
         const { version, requiredVersion, singleton, strictVersion } =
           versionInfo;
         return {
@@ -340,7 +362,7 @@ export default function federation(
             moduleNameOrPath: sharedModuleHints?.import
               ? sharedModuleHints.import
               : sharedModuleName,
-            type: 'shared',
+            type: FederatedModuleType.SHARED,
           }),
         ),
       );
@@ -355,7 +377,7 @@ export default function federation(
              * TODO: We don't current support that import be an array. What does that even mean ? Need further clarification.
              */
             moduleNameOrPath: exposedModulePath.import as string,
-            type: 'exposed',
+            type: FederatedModuleType.EXPOSED,
           }),
         ),
       );
@@ -367,8 +389,9 @@ export default function federation(
           ([remoteName, remoteEntity]): FederatedModule => ({
             name: remoteName,
             moduleNameOrPath: remoteEntity.external as string,
-            type: 'remote'
-        }))
+            type: FederatedModuleType.REMOTE,
+          }),
+        ),
       );
       /* eslint-disable-next-line no-restricted-syntax */
       for (const {
@@ -379,6 +402,15 @@ export default function federation(
         /**
          * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
          */
+        if (type === FederatedModuleType.REMOTE) {
+          federatedModuleInfo[moduleName] = {
+            name: moduleName,
+            moduleNameOrPath,
+            sanitizedModuleNameOrPath: null,
+            type,
+          };
+          continue;
+        }
         /* eslint-disable-next-line no-await-in-loop */
         const resolvedId = await this.resolve(moduleNameOrPath);
         const resolvedModulePath = getModulePathFromResolvedId(
@@ -399,11 +431,11 @@ export default function federation(
         );
         if (
           !Object.prototype.hasOwnProperty.call(
-            sharedOrExposedModuleInfo,
+            federatedModuleInfo,
             resolvedModulePath,
           )
         ) {
-          sharedOrExposedModuleInfo[resolvedModulePath] = {
+          federatedModuleInfo[resolvedModulePath] = {
             name: moduleName,
             moduleNameOrPath,
             sanitizedModuleNameOrPath,
@@ -455,7 +487,7 @@ export default function federation(
        * For remote modules, we just resolve it to the whatever the import was.
        */
       for (const remoteName in remotes) {
-        if (source.startsWith(`${remoteName}@`)) {
+        if (source.startsWith(`${remoteName}/`)) {
           return {
             id: source,
             external: true,
@@ -601,13 +633,16 @@ export default function federation(
               );
               if (
                 Object.prototype.hasOwnProperty.call(
-                  sharedOrExposedModuleInfo,
+                  federatedModuleInfo,
                   resolvedModulePath,
                 )
               ) {
                 chunkHasFederatedImports = true;
-                const chunkName =
-                  sharedOrExposedModuleInfo[resolvedModulePath].chunkPath;
+                const chunkName = (
+                  federatedModuleInfo[
+                    resolvedModulePath
+                  ] as SharedOrExposedModuleInfo
+                ).chunkPath;
                 const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
@@ -661,7 +696,7 @@ export default function federation(
         const resolvedModulePath = getModulePathFromResolvedId(id);
         if (
           Object.prototype.hasOwnProperty.call(
-            sharedOrExposedModuleInfo,
+            federatedModuleInfo,
             resolvedModulePath,
           )
         ) {
@@ -671,12 +706,16 @@ export default function federation(
            * NOTE: Providing the chunk name the same as the remote entry name doesn't work as it ends up creating multiple chunks.
            * TODO: Raise this bug with rollup.
            */
-          if (sharedOrExposedModuleInfo[resolvedModulePath].versionInfo.eager) {
+          if (
+            (
+              federatedModuleInfo[
+                resolvedModulePath
+              ] as SharedOrExposedModuleInfo
+            ).versionInfo.eager
+          ) {
             return null;
           }
-          return getChunkNameForModule(
-            sharedOrExposedModuleInfo[resolvedModulePath],
-          );
+          return getChunkNameForModule(federatedModuleInfo[resolvedModulePath]);
         }
         return null;
       };

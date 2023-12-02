@@ -1,11 +1,11 @@
 import React, { Component, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+/* eslint-disable-next-line import/no-unresolved */
+import Button from 'project-b/Button';
 import { ABC } from './abc.js';
 
 export { createStore, compose } from 'redux';
 export { applyMiddleware as kindlyApplyMiddleware } from 'redux';
-
-import Button from 'project-b/Button';
 
 /* eslint-disable no-console */
 
