@@ -1,5 +1,8 @@
 import React, { Component, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+
+/* eslint-disable-next-line import/no-unresolved */
+import Button, { someThingElse } from 'project-b/button';
 import { ABC } from './abc.js';
 
 export { createStore, compose } from 'redux';
@@ -19,6 +22,9 @@ export async function doSomething() {
   console.log('ABC = ', ABC);
   const { PQR } = await import('./pqr.js');
   console.log('PQR = ', PQR);
+
+  console.log('Button from project-b is: ', Button);
+  console.log('someThingElse from project-b is: ', someThingElse());
 
   return {
     React,

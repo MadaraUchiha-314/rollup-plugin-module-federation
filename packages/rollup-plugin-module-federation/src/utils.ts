@@ -3,8 +3,8 @@ import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
 
 import type { PackageJson } from 'type-fest';
-import type { Exposes, Shared } from '../types';
-import type { SharedObject, ExposesObject } from './types';
+import type { Exposes, Remotes, Shared } from '../types';
+import type { SharedObject, ExposesObject, RemotesObject } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
   return id.split('?')[0];
@@ -18,8 +18,8 @@ export function getChunkNameForModule({
   sanitizedModuleNameOrPath,
   type,
 }: {
-  sanitizedModuleNameOrPath: string;
-  type: 'shared' | 'exposed';
+  sanitizedModuleNameOrPath: string | null;
+  type: 'shared' | 'exposed' | 'remote';
 }) {
   return `__federated__${type}__${sanitizedModuleNameOrPath}`;
 }
@@ -141,6 +141,62 @@ export function getExposesConfig(exposes: Exposes): ExposesObject {
           throw Error(
             'Could not parse item exposed object{}. Item is: ',
             exposedEntity,
+          );
+        }
+      },
+      {},
+    );
+  }
+}
+
+export function getRemotesConfig(remotes: Remotes): RemotesObject {
+  if (Array.isArray(remotes)) {
+    return remotes.reduce<RemotesObject>(
+      (remoteModules, remoteEntity): RemotesObject => {
+        if (typeof remoteEntity === 'string') {
+          return {
+            ...remoteModules,
+            [remoteEntity]: {
+              external: remoteEntity,
+            },
+          };
+        } else if (typeof remoteEntity === 'object') {
+          return {
+            ...remoteModules,
+            ...getRemotesConfig(remoteEntity),
+          };
+        } else {
+          throw Error(
+            'Could not parse item shared object[]. Item is: ',
+            remoteEntity,
+          );
+        }
+      },
+      {},
+    );
+  } else {
+    return Object.entries(remotes).reduce<RemotesObject>(
+      (remoteModules, [key, remoteEntity]): RemotesObject => {
+        if (typeof remoteEntity === 'string') {
+          return {
+            ...remoteModules,
+            [key]: {
+              external: remoteEntity,
+            },
+          };
+        } else if (Array.isArray(remoteEntity)) {
+          throw Error(
+            'Specifying an array as an entrypoint for exposed modules is not supported yet',
+          );
+        } else if (typeof remoteEntity === 'object') {
+          return {
+            ...remoteModules,
+            [key]: remoteEntity,
+          };
+        } else {
+          throw Error(
+            'Could not parse item exposed object{}. Item is: ',
+            remoteEntity,
           );
         }
       },

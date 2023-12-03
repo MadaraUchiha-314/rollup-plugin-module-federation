@@ -41,3 +41,67 @@ export async function __federatedImport__(modulePath) {
   }
   throw Error(`${modulePath} not available in shared scope.`);
 }
+
+async function loadRemoteModule(remoteModuleInfo, remoteType = 'module') {
+  if (remoteType === 'module') {
+    const url = remoteModuleInfo.moduleNameOrPath.split('@')?.[1];
+    if (!url) {
+      throw Error(
+        `Incorrect format of remote module url ${remoteModuleInfo.moduleNameOrPath}`,
+      );
+    }
+    const module = await import(url);
+    return module;
+  }
+  throw Error(
+    `Loading module from a remote type ${remoteType} is not supported.`,
+  );
+}
+
+function unwrapDefaultImporFromModule(module) {
+  return module?.__esModule || module?.[Symbol.toStringTag] === 'Module'
+    ? module.default
+    : module;
+}
+
+/**
+ * Get a module from a remote container.
+ * @param {string} modulePath The module that the user is importing from the remote container
+ * @param {boolean} unwrapDefaultImport Whether to unwrap the default import out of the exposed module
+ */
+export async function __federatedImportFromRemote__(
+  modulePath,
+  unwrapDefaultImport = false,
+) {
+  /**
+   * First figure out which remote container the import is referencing.
+   */
+  /* eslint-disable-next-line no-undef */
+  const remoteModules = Object.values(moduleMap).filter(
+    ({ type }) => type === 'remote',
+  );
+  const remoteModuleInfo = remoteModules.find((remoteModule) => modulePath.startsWith(`${remoteModule.name}/`));
+  if (!remoteModuleInfo) {
+    throw Error(
+      `No remote containers registered satisfy import of ${modulePath}`,
+    );
+  }
+  let remoteContainer = null;
+
+  if (!remoteModuleInfo.module) {
+    remoteModuleInfo.module = await loadRemoteModule(remoteModuleInfo);
+  }
+  remoteContainer = remoteModuleInfo.module;
+  if (!remoteModuleInfo.initialized) {
+    await remoteContainer.init(sharedScope);
+    remoteModuleInfo.initialized = true;
+  }
+  const exposedModuleName = `./${modulePath.slice(
+    remoteModuleInfo.name.length + 1,
+  )}`;
+  const exposedModule = (await remoteContainer.get(exposedModuleName))();
+
+  return unwrapDefaultImport
+    ? unwrapDefaultImporFromModule(exposedModule)
+    : exposedModule;
+}

@@ -1,7 +1,0 @@
-{
-  "installCommand": "npm install",
-  "buildCommand": "npm run build --workspaces --if-present",
-  "outputDirectory": "packages/examples/project-a/dist",
-  "framework": null,
-  "trailingSlash": true
-}
