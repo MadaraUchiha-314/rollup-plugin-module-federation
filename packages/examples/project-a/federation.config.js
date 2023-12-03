@@ -2,6 +2,10 @@ const getProjectBRemoteEntry = (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
+    /**
+     * NOTE: We are not referencing the PR url. We are always referencing the main branch deploymnt of project-b.
+     * TODO: Point to the PR deployment url.
+     */
     const url = `https://${projectName}.vercel.app/${bundler}/${remoteEntryName}`;
     return url;
   }
