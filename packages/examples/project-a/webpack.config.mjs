@@ -21,7 +21,7 @@ export default {
   },
   plugins: [
     new ModuleFederationPlugin({
-      ...federationconfig,
+      ...federationconfig('webpack'),
       /**
        * Additional stuff for webpack.
        */

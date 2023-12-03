@@ -20,7 +20,7 @@ export default {
       'process.env.NODE_ENV': JSON.stringify('production'),
       preventAssignment: true,
     }),
-    federation(federationconfig),
+    federation(federationconfig('rollup')),
     nodeResolve(),
     commonjs(),
     copy({
