@@ -701,9 +701,9 @@ export default function federation(
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
-                    // @ts-ignore
                     {
                       importStmt: FEDERATED_IMPORT_FROM_REMOTE,
+                      // @ts-ignore
                       entityToImport: node?.source?.value,
                     },
                     FederatedModuleType.REMOTE,

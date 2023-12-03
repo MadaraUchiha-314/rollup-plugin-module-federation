@@ -1,7 +1,8 @@
 import React, { Component, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+
 /* eslint-disable-next-line import/no-unresolved */
-import Button, { someThingElse } from 'project-b/Button';
+import Button, { someThingElse } from 'project-b/button';
 import { ABC } from './abc.js';
 
 export { createStore, compose } from 'redux';
