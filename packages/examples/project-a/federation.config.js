@@ -2,8 +2,7 @@ const getProjectBRemoteEntry = (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
-    const domain = `${projectName}-git-${process.env.VERCEL_GIT_COMMIT_REF}-${process.env.VERCEL_GIT_REPO_SLUG}`;
-    const url = `https://${domain}.vercel.app/${bundler}/${remoteEntryName}`;
+    const url = `https://${projectName}.vercel.app/${bundler}/${remoteEntryName}`;
     return url;
   }
   /**
