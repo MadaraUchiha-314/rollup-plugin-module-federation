@@ -50,9 +50,7 @@ async function loadRemoteModule(remoteUrl, remoteType = 'module') {
      */
     const url = remoteUrl.split('@')?.[1] ?? remoteUrl;
     if (!url) {
-      throw Error(
-        `Incorrect format of remote module url ${remoteUrl}`,
-      );
+      throw Error(`Incorrect format of remote module url ${remoteUrl}`);
     }
     const module = await import(url);
     return module;
@@ -96,7 +94,10 @@ export async function __federatedImportFromRemote__(
   let remoteContainer = null;
 
   if (!remoteModuleInfo.module) {
-    remoteModuleInfo.module = await loadRemoteModule(remoteModuleInfo.moduleNameOrPath, remoteModuleInfo.remoteType);
+    remoteModuleInfo.module = await loadRemoteModule(
+      remoteModuleInfo.moduleNameOrPath,
+      remoteModuleInfo.remoteType,
+    );
   }
   remoteContainer = remoteModuleInfo.module;
   if (!remoteModuleInfo.initialized) {
