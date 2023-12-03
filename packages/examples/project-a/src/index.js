@@ -22,7 +22,7 @@ export async function doSomething() {
   const { PQR } = await import('./pqr.js');
   console.log('PQR = ', PQR);
 
-  console.log(Button);
+  console.log('Button from project-b is: ', Button);
 
   return {
     React,

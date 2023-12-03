@@ -54,6 +54,8 @@ interface BaseModuleInfo {
 
 interface RemoteModuleInfo extends BaseModuleInfo {
   type: FederatedModuleType.REMOTE;
+  initialized: boolean;
+  module: any;
 }
 
 interface SharedOrExposedModuleInfo extends BaseModuleInfo {
@@ -114,6 +116,7 @@ const FEDERATED_IMPORT_MODULE_ID: string = '__federatedImport__';
 const FEDERATED_IMPORT_FILE_NAME: string = `${FEDERATED_IMPORT_MODULE_ID}.js`;
 const FEDERATED_IMPORT_NAME: string = 'federatedImport';
 const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
+const FEDERATED_IMPORT_FROM_REMOTE: string = '__federatedImportFromRemote__';
 
 const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
@@ -341,6 +344,19 @@ export default function federation(
       {},
     );
 
+  /**
+   * Checks whether the import is from a remote module or not.
+   * @param importSource The source from which we are importing.
+   */
+  const isImportFromRemoteModule = (importSource: string): boolean => {
+    for (const remoteName in remotes) {
+      if (importSource.includes(`${remoteName}/`)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   return {
     name: 'rollup-plugin-federation',
     async buildStart() {
@@ -408,6 +424,8 @@ export default function federation(
             moduleNameOrPath,
             sanitizedModuleNameOrPath: null,
             type,
+            initialized: false,
+            module: null,
           };
           continue;
         }
@@ -654,6 +672,25 @@ export default function federation(
                   (node as AcornNode).end,
                   federatedImportStmsStr,
                 );
+              } else if (
+                isImportFromRemoteModule(
+                  // @ts-ignore
+                  node?.source?.value,
+                )
+              ) {
+                chunkHasFederatedImports = true;
+                // @ts-ignore
+                const moduleSpecifier = `${FEDERATED_IMPORT_FROM_REMOTE}('${node?.source?.value}')`;
+                const federatedImportStmsStr =
+                  getFederatedImportStatementForNode(
+                    node as NodesToRewrite,
+                    moduleSpecifier,
+                  );
+                magicString.overwrite(
+                  (node as AcornNode).start,
+                  (node as AcornNode).end,
+                  federatedImportStmsStr,
+                );
               }
             }
           },
@@ -666,7 +703,7 @@ export default function federation(
             /**
              * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
              */
-            import { ${FEDERATED_IMPORT_EXPR} } from '${FEDERATED_IMPORT_MODULE_ID}';${EOL}
+            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '${FEDERATED_IMPORT_MODULE_ID}';${EOL}
           `);
         }
         return {

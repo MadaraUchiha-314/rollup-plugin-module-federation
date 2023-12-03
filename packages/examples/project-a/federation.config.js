@@ -1,5 +1,5 @@
 export const federationconfig = {
-  name: 'rr_random_package',
+  name: 'sample_project_a',
   filename: 'my-remote-entry.js',
   exposes: {
     './react': 'react',
@@ -10,7 +10,8 @@ export const federationconfig = {
   },
   remotes: {
     'project-b': {
-      external: 'project-b@https://example.com/my-remote-entry.js',
+      external:
+        'project-b@http://localhost:8080/packages/examples/project-b/dist/rollup/my-remote-entry.js',
     },
   },
   shared: {
