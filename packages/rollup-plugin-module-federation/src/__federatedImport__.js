@@ -42,17 +42,22 @@ export async function __federatedImport__(modulePath) {
   throw Error(`${modulePath} not available in shared scope.`);
 }
 
-async function loadRemoteModule(remoteModuleInfo, remoteType = 'module') {
-  if (remoteType === 'module') {
-    const url = remoteModuleInfo.moduleNameOrPath.split('@')?.[1];
+async function loadRemoteModule(remoteUrl, remoteType = 'module') {
+  if (remoteType === 'module' || remoteType === 'import') {
+    /**
+     * TODO: Look at what the convention is for specifying remote urls.
+     * What does the @ in a lot of these examples mean ?
+     */
+    const url = remoteUrl.split('@')?.[1] ?? remoteUrl;
     if (!url) {
-      throw Error(
-        `Incorrect format of remote module url ${remoteModuleInfo.moduleNameOrPath}`,
-      );
+      throw Error(`Incorrect format of remote module url ${remoteUrl}`);
     }
     const module = await import(url);
     return module;
   }
+  /**
+   * TODO: Add support for more remote types.
+   */
   throw Error(
     `Loading module from a remote type ${remoteType} is not supported.`,
   );
@@ -89,7 +94,10 @@ export async function __federatedImportFromRemote__(
   let remoteContainer = null;
 
   if (!remoteModuleInfo.module) {
-    remoteModuleInfo.module = await loadRemoteModule(remoteModuleInfo);
+    remoteModuleInfo.module = await loadRemoteModule(
+      remoteModuleInfo.moduleNameOrPath,
+      remoteModuleInfo.remoteType,
+    );
   }
   remoteContainer = remoteModuleInfo.module;
   if (!remoteModuleInfo.initialized) {

@@ -56,6 +56,7 @@ interface RemoteModuleInfo extends BaseModuleInfo {
   type: FederatedModuleType.REMOTE;
   initialized: boolean;
   module: any;
+  remoteType: string;
 }
 
 interface SharedOrExposedModuleInfo extends BaseModuleInfo {
@@ -75,6 +76,7 @@ interface ModuleMapEntry {
   requiredVersion: string | null;
   singleton: boolean | null;
   strictVersion: boolean | null;
+  remoteType?: string;
 }
 
 interface FederatedModule {
@@ -255,6 +257,8 @@ export default function federation(
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
+  const remoteType = federationConfig?.remoteType ?? 'module';
+
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
     readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'),
@@ -330,12 +334,14 @@ export default function federation(
       (currentModuleMap, moduleInfo) => {
         const { name: moduleName, moduleNameOrPath, type } = moduleInfo;
         if (type === FederatedModuleType.REMOTE) {
+          const { remoteType } = moduleInfo as RemoteModuleInfo;
           return {
             ...currentModuleMap,
             [moduleName]: {
               name: moduleName,
               moduleNameOrPath,
               type,
+              remoteType,
             },
           };
         }
@@ -442,6 +448,7 @@ export default function federation(
             type,
             initialized: false,
             module: null,
+            remoteType,
           };
           continue;
         }
