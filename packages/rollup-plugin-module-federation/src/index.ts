@@ -125,7 +125,10 @@ const __dirname: string = dirname(__filename);
 
 export function getFederatedImportStatementForNode(
   node: NodesToRewrite,
-  { importStmt, entityToImport }: { importStmt: string, entityToImport: string },
+  {
+    importStmt,
+    entityToImport,
+  }: { importStmt: string; entityToImport: string },
   federatedModuleType: FederatedModuleType,
 ): string {
   const federatedImportStms: Array<string> = [];
@@ -677,7 +680,10 @@ export default function federation(
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
-                    { importStmt: FEDERATED_IMPORT_EXPR, entityToImport: chunkName },
+                    {
+                      importStmt: FEDERATED_IMPORT_EXPR,
+                      entityToImport: chunkName,
+                    },
                     FederatedModuleType.SHARED,
                   );
                 magicString.overwrite(
@@ -696,8 +702,11 @@ export default function federation(
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
                     // @ts-ignore
-                    { importStmt: FEDERATED_IMPORT_FROM_REMOTE, entityToImport: node?.source?.value},
-                    FederatedModuleType.REMOTE
+                    {
+                      importStmt: FEDERATED_IMPORT_FROM_REMOTE,
+                      entityToImport: node?.source?.value,
+                    },
+                    FederatedModuleType.REMOTE,
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,

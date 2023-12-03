@@ -23,7 +23,7 @@ export async function doSomething() {
   console.log('PQR = ', PQR);
 
   console.log('Button from project-b is: ', Button);
-  console.log('someThingElse from project-b is: ', someThingElse())
+  console.log('someThingElse from project-b is: ', someThingElse());
 
   return {
     React,

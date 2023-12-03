@@ -59,7 +59,9 @@ async function loadRemoteModule(remoteModuleInfo, remoteType = 'module') {
 }
 
 function unwrapDefaultImporFromModule(module) {
-  return (module?.__esModule || module?.[Symbol.toStringTag] === 'Module') ? module.default : module;
+  return module?.__esModule || module?.[Symbol.toStringTag] === 'Module'
+    ? module.default
+    : module;
 }
 
 /**
@@ -67,7 +69,10 @@ function unwrapDefaultImporFromModule(module) {
  * @param {string} modulePath The module that the user is importing from the remote container
  * @param {boolean} unwrapDefaultImport Whether to unwrap the default import out of the exposed module
  */
-export async function __federatedImportFromRemote__(modulePath, unwrapDefaultImport = false) {
+export async function __federatedImportFromRemote__(
+  modulePath,
+  unwrapDefaultImport = false,
+) {
   /**
    * First figure out which remote container the import is referencing.
    */
@@ -90,11 +95,13 @@ export async function __federatedImportFromRemote__(modulePath, unwrapDefaultImp
   if (!remoteModuleInfo.initialized) {
     await remoteContainer.init(sharedScope);
     remoteModuleInfo.initialized = true;
-  } 
+  }
   const exposedModuleName = `./${modulePath.slice(
     remoteModuleInfo.name.length + 1,
   )}`;
   const exposedModule = (await remoteContainer.get(exposedModuleName))();
 
-  return unwrapDefaultImport ? unwrapDefaultImporFromModule(exposedModule): exposedModule;
+  return unwrapDefaultImport
+    ? unwrapDefaultImporFromModule(exposedModule)
+    : exposedModule;
 }
