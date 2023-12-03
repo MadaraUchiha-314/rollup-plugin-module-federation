@@ -125,7 +125,8 @@ const __dirname: string = dirname(__filename);
 
 export function getFederatedImportStatementForNode(
   node: NodesToRewrite,
-  moduleSpecifier: string,
+  { importStmt, entityToImport }: { importStmt: string, entityToImport: string },
+  federatedModuleType: FederatedModuleType,
 ): string {
   const federatedImportStms: Array<string> = [];
   /**
@@ -133,6 +134,7 @@ export function getFederatedImportStatementForNode(
    * ImportDeclaration spec: https://tc39.es/ecma262/#prod-ImportDeclaration
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
+  const moduleSpecifier = `${importStmt}('${entityToImport}')`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       (node as ImportDeclaration).specifiers.forEach((specifier) => {
@@ -141,9 +143,20 @@ export function getFederatedImportStatementForNode(
             /**
              * import ABC from 'pqr';
              */
-            federatedImportStms.push(
-              `const ${specifier.local.name} = await ${moduleSpecifier}`,
-            );
+            if (federatedModuleType === FederatedModuleType.REMOTE) {
+              /**
+               * When it is a default import from a remote module we have to pass special hints to the module loader.
+               * This is to load the default exported entity.
+               */
+              const defaultImportModuleSpecifier = `${importStmt}('${entityToImport}', true)`;
+              federatedImportStms.push(
+                `const ${specifier.local.name} = await ${defaultImportModuleSpecifier}`,
+              );
+            } else {
+              federatedImportStms.push(
+                `const ${specifier.local.name} = await ${moduleSpecifier}`,
+              );
+            }
             break;
           }
           case 'ImportNamespaceSpecifier': {
@@ -661,11 +674,11 @@ export default function federation(
                     resolvedModulePath
                   ] as SharedOrExposedModuleInfo
                 ).chunkPath;
-                const moduleSpecifier = `${FEDERATED_IMPORT_EXPR}('${chunkName}')`;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
-                    moduleSpecifier,
+                    { importStmt: FEDERATED_IMPORT_EXPR, entityToImport: chunkName },
+                    FederatedModuleType.SHARED,
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,
@@ -679,12 +692,12 @@ export default function federation(
                 )
               ) {
                 chunkHasFederatedImports = true;
-                // @ts-ignore
-                const moduleSpecifier = `${FEDERATED_IMPORT_FROM_REMOTE}('${node?.source?.value}')`;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
-                    moduleSpecifier,
+                    // @ts-ignore
+                    { importStmt: FEDERATED_IMPORT_FROM_REMOTE, entityToImport: node?.source?.value},
+                    FederatedModuleType.REMOTE
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,

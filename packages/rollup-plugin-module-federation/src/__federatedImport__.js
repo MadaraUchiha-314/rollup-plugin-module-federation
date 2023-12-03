@@ -46,7 +46,9 @@ async function loadRemoteModule(remoteModuleInfo, remoteType = 'module') {
   if (remoteType === 'module') {
     const url = remoteModuleInfo.moduleNameOrPath.split('@')?.[1];
     if (!url) {
-      throw Error(`Incorrect format of remote module url ${remoteModuleInfo.moduleNameOrPath}`);
+      throw Error(
+        `Incorrect format of remote module url ${remoteModuleInfo.moduleNameOrPath}`,
+      );
     }
     const module = await import(url);
     return module;
@@ -56,11 +58,16 @@ async function loadRemoteModule(remoteModuleInfo, remoteType = 'module') {
   );
 }
 
+function unwrapDefaultImporFromModule(module) {
+  return (module?.__esModule || module?.[Symbol.toStringTag] === 'Module') ? module.default : module;
+}
+
 /**
  * Get a module from a remote container.
  * @param {string} modulePath The module that the user is importing from the remote container
+ * @param {boolean} unwrapDefaultImport Whether to unwrap the default import out of the exposed module
  */
-export async function __federatedImportFromRemote__(modulePath) {
+export async function __federatedImportFromRemote__(modulePath, unwrapDefaultImport = false) {
   /**
    * First figure out which remote container the import is referencing.
    */
@@ -75,20 +82,19 @@ export async function __federatedImportFromRemote__(modulePath) {
     );
   }
   let remoteContainer = null;
+
+  if (!remoteModuleInfo.module) {
+    remoteModuleInfo.module = await loadRemoteModule(remoteModuleInfo);
+  }
+  remoteContainer = remoteModuleInfo.module;
   if (!remoteModuleInfo.initialized) {
-    if (!remoteModuleInfo.module) {
-      remoteContainer = await loadRemoteModule(remoteModuleInfo);
-      remoteModuleInfo.module = remoteContainer;
-    } else {
-      remoteContainer = remoteModuleInfo.module;
-    }
     await remoteContainer.init(sharedScope);
     remoteModuleInfo.initialized = true;
-  }
+  } 
   const exposedModuleName = `./${modulePath.slice(
     remoteModuleInfo.name.length + 1,
   )}`;
   const exposedModule = (await remoteContainer.get(exposedModuleName))();
 
-  return exposedModule;
+  return unwrapDefaultImport ? unwrapDefaultImporFromModule(exposedModule): exposedModule;
 }
