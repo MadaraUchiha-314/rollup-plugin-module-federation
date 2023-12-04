@@ -1,7 +1,7 @@
 <html>
   <head>
     <title>Module Federation Experiments</title>
-    <script type="module">
+    <script type="module" id="example-code">
       const sharedScope = {
         /**
          * In the base-example, we have declared uuid as import: false
@@ -43,13 +43,34 @@
       const pqr = (await container.get('./pqr'))();
       console.log('exposed module ./pqr', pqr);
     </script>
+    <style>
+      pre {
+        border: solid;
+        text-wrap: wrap;
+      }
+      .container {
+        display: flex;
+      }
+      .inner-container {
+        margin: 10px 10px 10px 10px;
+      }
+    </style>
   </head>
   <body>
-    <h3>View page source to see what's happening</h3>
     <h3>Open JS console to see logs.</h3>
     <h4>
       Type globalThis.shareScope in the JS console to check the current state of
       shared scope object.
     </h4>
+    <div class="container">
+      <div class="inner-container">
+        <h4>Check the page source or code below to see what's happening</h4>
+        <pre id="example-code-preview" />
+      </div>
+    </div>
   </body>
+  <script>
+    document.getElementById('example-code-preview').innerHTML =
+      document.getElementById('example-code').innerHTML;
+  </script>
 </html>
