@@ -571,6 +571,7 @@ export default function federation(
                 sharedScope[moduleNameOrPath][version] = {
                     get: fallback,
                     loaded: false,
+                    from: '${name}',
                 }
             }
             return sharedScope[moduleNameOrPath][version];

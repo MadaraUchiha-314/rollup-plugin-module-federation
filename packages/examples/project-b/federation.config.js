@@ -5,6 +5,8 @@ export const federationconfig = {
     './button': './src/index.js',
   },
   shared: {
-    react: {},
+    react: {
+      import: false,
+    },
   },
 };

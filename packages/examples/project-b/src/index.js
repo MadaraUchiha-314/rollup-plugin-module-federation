@@ -1,3 +1,5 @@
+import React from 'react';
+
 const Button = (text) => ({
   text,
 });
@@ -5,6 +7,7 @@ const Button = (text) => ({
 export const someThingElse = () => ({
   something: 'nothing',
   hello: 'world',
+  React,
 });
 
 export default Button;
