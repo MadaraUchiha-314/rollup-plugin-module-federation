@@ -12,7 +12,8 @@
   "author": "Rohith R",
   "license": "MIT",
   "dependencies": {
-    "react": "^18.0.0"
+    "react": "^18.0.0",
+    "axios": "1.6.2"
   },
   "devDependencies": {
     "@originjs/vite-plugin-federation": "1.2.3",

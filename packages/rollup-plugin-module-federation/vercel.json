@@ -1,7 +1,0 @@
-{
-  "installCommand": "cd ../../ && npm install",
-  "buildCommand": "cd ../../ && npm run build --workspaces --if-present",
-  "outputDirectory": "dist",
-  "framework": null,
-  "trailingSlash": true
-}
