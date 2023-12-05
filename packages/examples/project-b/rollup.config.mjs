@@ -23,7 +23,9 @@ export default {
     }),
     federation(federationconfig),
     json(),
-    nodeResolve(),
+    nodeResolve({
+      browser: true,
+    }),
     commonjs(),
     copy({
       targets: [

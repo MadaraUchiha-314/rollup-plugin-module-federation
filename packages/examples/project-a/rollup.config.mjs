@@ -2,6 +2,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import copy from 'rollup-plugin-copy';
+import json from '@rollup/plugin-json';
 
 // import federation from '@originjs/vite-plugin-federation';
 import federation from 'rollup-plugin-module-federation';
@@ -21,7 +22,10 @@ export default {
       preventAssignment: true,
     }),
     federation(federationconfig('rollup')),
-    nodeResolve(),
+    nodeResolve({
+      browser: true,
+    }),
+    json(),
     commonjs(),
     copy({
       targets: [
