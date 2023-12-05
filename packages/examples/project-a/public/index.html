@@ -9,7 +9,7 @@
          */
         uuid: {
           '9.0.0': {
-            get: () => () => Promise.resolve({ v4: { mock: 'uuid' } }),
+            get: () => () => Promise.resolve({ v4: () => ({ mock: 'uuid' }) }),
           },
         },
       };
