@@ -8,5 +8,6 @@ export const federationconfig = {
     react: {
       import: false,
     },
+    axios: {}
   },
 };
