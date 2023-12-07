@@ -7,7 +7,8 @@
   "workspaces": [
     "packages/rollup-plugin-module-federation",
     "packages/examples/project-a",
-    "packages/examples/project-b"
+    "packages/examples/project-b",
+    "packages/examples/project-c"
   ],
   "repository": {
     "type": "git",

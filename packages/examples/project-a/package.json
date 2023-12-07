@@ -4,6 +4,12 @@
   "description": "A sample project-a to test rollup-federation",
   "main": "src/index.js",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/rollup/my-remote-entry.js",
+      "node": "./dist/rollup/my-remote-entry.js"
+    }
+  },
   "scripts": {
     "build": "rm -rf dist/ && webpack && rollup --config rollup.config.mjs",
     "test": "echo \"Error: no test specified\" && exit 1",
