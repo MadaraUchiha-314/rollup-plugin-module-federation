@@ -1,6 +1,7 @@
 import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
+import { generateExposeFilename, generateShareFilename } from '@module-federation/sdk';
 
 import type { PackageJson } from 'type-fest';
 import type { Exposes, Remotes, Shared } from '../types';
@@ -11,7 +12,12 @@ export function getModulePathFromResolvedId(id: string): string {
 }
 
 export function sanitizeModuleName(name: string): string {
-  return name.replace(/\.|\//g, '_');
+  /**
+   * Removes file name extensions from the module names.
+   * Exposed modeules or even shared modules in some cases have file extension in them.
+   * Doesn't seem like the module-federation/sdk provides any functions to remove this.
+   */
+  return name.replace(/\.[^/.]+$/, '');
 }
 
 export function getChunkNameForModule({
@@ -21,7 +27,19 @@ export function getChunkNameForModule({
   sanitizedModuleNameOrPath: string | null;
   type: 'shared' | 'exposed' | 'remote';
 }) {
-  return `__federated__${type}__${sanitizedModuleNameOrPath}`;
+  /**
+   * Returning an empty string might cause undefined behavior.
+   */
+  if (!sanitizedModuleNameOrPath) {
+    throw Error(`Invalid module name provided: ${sanitizeModuleName}`);
+  }
+  if (type === 'shared') {
+    return generateShareFilename(sanitizedModuleNameOrPath, false);
+  }
+  if (type === 'exposed') {
+    return generateExposeFilename(sanitizedModuleNameOrPath, false);
+  }
+  throw Error(`Generating chunk name for ${type} is not supported`);
 }
 
 export function getFileNameFromChunkName(chunkName: string): string {
