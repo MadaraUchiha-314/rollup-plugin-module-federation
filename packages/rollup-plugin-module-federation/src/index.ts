@@ -15,6 +15,7 @@ import {
   getSharedConfig,
   getExposesConfig,
   getRemotesConfig,
+  getInitConfig,
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
@@ -254,6 +255,8 @@ export default function federation(
   const exposes = getExposesConfig(federationConfig.exposes || {});
 
   const remotes = getRemotesConfig(federationConfig.remotes || {});
+
+  const initConfig = getInitConfig(name, shared, remotes);
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
@@ -549,58 +552,12 @@ export default function federation(
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
-          /**
-           * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
-           */
-          import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
-          ${Object.entries(shared)
-            .filter(([, sharedModule]) => sharedModule.eager ?? false)
-            .map(([key, sharedModule]) => {
-              const importedModule = sharedModule.import ?? key;
-              /**
-               * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
-               */
-              return `import * as ${FEDERATED_EAGER_SHARED}${importedModule} from '${importedModule}';`;
-            })
-            .join('')}
-          function register(sharedScope, moduleNameOrPath, version, fallback) {
-            if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
-                sharedScope[moduleNameOrPath] = {};
-            }
-            if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
-                sharedScope[moduleNameOrPath][version] = {
-                    get: fallback,
-                    loaded: false,
-                    from: '${name}',
-                }
-            }
-            return sharedScope[moduleNameOrPath][version];
-          }
+          import { init as initModuleFederationRuntime } from '@module-federation/runtime';
+
           const init = (sharedScope) => {
-            setSharedScope(sharedScope);
-            ${Object.entries(shared)
-              .map(([key, sharedModule]) => {
-                const { shareKey } = sharedModule;
-                const importedModule = sharedModule.import ?? key;
-                if (importedModule) {
-                  const versionForSharedModule =
-                    getVersionForModule(importedModule);
-                  if (sharedModule?.eager) {
-                    return `
-          register(sharedScope, '${
-            shareKey ?? key
-          }', '${versionForSharedModule}', () => Promise.resolve(${FEDERATED_EAGER_SHARED}${importedModule}).then((module) => () => module))
-        `;
-                  }
-                  return `
-          register(sharedScope, '${
-            shareKey ?? key
-          }', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
-        `;
-                }
-                return '';
-              })
-              .join('')}
+            initModuleFederationRuntime(
+             ${JSON.stringify(initConfig)}
+            );
           };
           const get = (module) => {
             switch(module) {

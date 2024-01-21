@@ -2,6 +2,7 @@ import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
 import { generateExposeFilename, generateShareFilename } from '@module-federation/sdk';
+import type { UserOptions } from '@module-federation/runtime/dist/type.cjs.js';
 
 import type { PackageJson } from 'type-fest';
 import type { Exposes, Remotes, Shared } from '../types';
@@ -221,4 +222,40 @@ export function getRemotesConfig(remotes: Remotes): RemotesObject {
       {},
     );
   }
+}
+
+export function getInitConfig(name: string, shared: SharedObject, remotes: RemotesObject): UserOptions {
+  return {
+    name,
+    shared: Object.entries(shared).reduce((sharedConfig, [pkgName, sharedConfigForPkg]) => {
+      return {
+        ...sharedConfig,
+        [pkgName]: {
+          version: sharedConfigForPkg.version,
+          shareConfig: {
+            singleton: sharedConfigForPkg.singleton,
+            requiredVersion: sharedConfigForPkg.requiredVersion,
+            eager: sharedConfigForPkg.eager,
+          },
+          get: {
+            toJSON() {
+              return `() => import('${sharedConfigForPkg.import}').then((module) => () => module))`
+            }
+          },
+          scope: sharedConfigForPkg.shareScope,
+        }
+      }
+    }, {}),
+    /**
+     * TODO: Find a type definition of how plugins can be injected during build time.
+     */
+    plugins: [],
+    remotes: Object.entries(remotes).map(([remoteName, remoteConfig]) => {
+      return {
+        name: remoteName,
+        entry: remoteConfig.external,
+        shareScope: remoteConfig.shareScope,
+      };
+    }),
+  };
 }
