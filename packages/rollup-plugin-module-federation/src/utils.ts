@@ -1,12 +1,23 @@
 import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
-import { generateExposeFilename, generateShareFilename } from '@module-federation/sdk';
-import type { UserOptions, ShareArgs } from '@module-federation/runtime/dist/type.cjs.js';
+import {
+  generateExposeFilename,
+  generateShareFilename,
+} from '@module-federation/sdk';
+import type {
+  UserOptions,
+  ShareArgs,
+} from '@module-federation/runtime/dist/type.cjs.js';
 
 import type { PackageJson } from 'type-fest';
 import type { Exposes, Remotes, Shared } from '../types';
-import type { SharedObject, ExposesObject, RemotesObject, ShareOptions } from './types';
+import type {
+  SharedObject,
+  ExposesObject,
+  RemotesObject,
+  ShareOptions,
+} from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
   return id.split('?')[0];
@@ -230,25 +241,32 @@ export function getRemotesConfig(remotes: Remotes): RemotesObject {
   }
 }
 
-export function getInitConfig(name: string, shared: SharedObject, remotes: RemotesObject): UserOptions {
+export function getInitConfig(
+  name: string,
+  shared: SharedObject,
+  remotes: RemotesObject,
+): UserOptions {
   return {
     name,
-    shared: Object.entries(shared).reduce((sharedConfig, [pkgName, sharedConfigForPkg]): ShareOptions => {
-      return {
-        ...sharedConfig,
-        [pkgName]: {
-          from: name,
-          version: sharedConfigForPkg.version,
-          shareConfig: {
-            singleton: sharedConfigForPkg.singleton,
-            requiredVersion: sharedConfigForPkg.requiredVersion,
-            eager: sharedConfigForPkg.eager,
+    shared: Object.entries(shared).reduce(
+      (sharedConfig, [pkgName, sharedConfigForPkg]): ShareOptions => {
+        return {
+          ...sharedConfig,
+          [pkgName]: {
+            from: name,
+            version: sharedConfigForPkg.version,
+            shareConfig: {
+              singleton: sharedConfigForPkg.singleton,
+              requiredVersion: sharedConfigForPkg.requiredVersion,
+              eager: sharedConfigForPkg.eager,
+            },
+            importedModule: sharedConfigForPkg.import,
+            scope: sharedConfigForPkg.shareScope,
           },
-          importedModule: sharedConfigForPkg.import,
-          scope: sharedConfigForPkg.shareScope,
-        }
-      };
-    }, {}),
+        };
+      },
+      {},
+    ),
     /**
      * TODO: Find a type definition of how plugins can be injected during build time.
      */

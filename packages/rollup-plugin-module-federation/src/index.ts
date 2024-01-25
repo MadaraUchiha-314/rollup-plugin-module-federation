@@ -559,19 +559,19 @@ export default function federation(
               name: '${initConfig.name}',
               plugins: [],
               remotes: ${JSON.stringify(initConfig.remotes)},
-              shared: {${
-                Object.entries(initConfig.shared ?? {}).map(([key, sharedConfig]) => {
+              shared: {${Object.entries(initConfig.shared ?? {}).map(
+                ([key, sharedConfig]) => {
                   return `
                     '${key}': {
                       ${JSON.stringify(sharedConfig).replace(/^\{|\}$/g, '')},
                       get: () => import('${
-                         // @ts-ignore 
+                        // @ts-ignore
                         sharedConfig.importedModule
                       }').then((module) => () => module)
                     }
-                  `
-                })
-              }},
+                  `;
+                },
+              )}},
             });
           };
           const get = (module) => {
