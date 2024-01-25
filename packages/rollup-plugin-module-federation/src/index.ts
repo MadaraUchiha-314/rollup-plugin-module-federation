@@ -555,9 +555,24 @@ export default function federation(
           import { init as initModuleFederationRuntime } from '@module-federation/runtime';
 
           const init = (sharedScope) => {
-            initModuleFederationRuntime(
-             ${JSON.stringify(initConfig)}
-            );
+            initModuleFederationRuntime({
+              name: '${initConfig.name}',
+              plugins: [],
+              remotes: ${JSON.stringify(initConfig.remotes)},
+              shared: {${
+                Object.entries(initConfig.shared ?? {}).map(([key, sharedConfig]) => {
+                  return `
+                    '${key}': {
+                      ${JSON.stringify(sharedConfig).replace(/^\{|\}$/g, '')},
+                      get: () => import('${
+                         // @ts-ignore 
+                        sharedConfig.importedModule
+                      }').then((module) => () => module)
+                    }
+                  `
+                })
+              }},
+            });
           };
           const get = (module) => {
             switch(module) {
