@@ -572,8 +572,8 @@ export default function federation(
               plugins: [],
               remotes: ${JSON.stringify(initConfig.remotes)},
               shared: {
-                ${Object.entries(initConfig.shared ?? {}).map(
-                  ([sharedPkg, sharedConfigForPkg]) => {
+                ${Object.entries(initConfig.shared ?? {})
+                  .map(([sharedPkg, sharedConfigForPkg]) => {
                     /**
                      * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
                      * QUESTION: How does one even support import: false with this ?
@@ -589,10 +589,14 @@ export default function federation(
                           '',
                         )},
                         ${
-                          sharedConfigForPkg.shareConfig?.eager ? `
-                            lib: () => ${FEDERATED_EAGER_SHARED}${// @ts-ignore 
-                              sharedConfigForPkg.importedModule},
-                          `: `
+                          sharedConfigForPkg.shareConfig?.eager
+                            ? `
+                            lib: () => ${FEDERATED_EAGER_SHARED}${
+                              // @ts-ignore
+                              sharedConfigForPkg.importedModule
+                            },
+                          `
+                            : `
                             get: () => import('${
                               // @ts-ignore
                               sharedConfigForPkg.importedModule
@@ -602,8 +606,8 @@ export default function federation(
                        
                       },
                   `;
-                  }
-                ).join('')}
+                  })
+                  .join('')}
               }
             });
           };
