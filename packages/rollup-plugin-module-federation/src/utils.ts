@@ -5,10 +5,7 @@ import {
   generateExposeFilename,
   generateShareFilename,
 } from '@module-federation/sdk';
-import type {
-  UserOptions,
-  ShareArgs,
-} from '@module-federation/runtime/dist/type.cjs.js';
+import type { UserOptions } from '@module-federation/runtime/dist/type.cjs.js';
 
 import type { PackageJson } from 'type-fest';
 import type { Exposes, Remotes, Shared } from '../types';
@@ -17,6 +14,7 @@ import type {
   ExposesObject,
   RemotesObject,
   ShareOptions,
+  CustomShareArgs,
 } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
@@ -248,21 +246,24 @@ export function getInitConfig(
 ): UserOptions {
   return {
     name,
-    shared: Object.entries(shared).reduce(
+    shared: Object.entries(shared).reduce<ShareOptions>(
       (sharedConfig, [pkgName, sharedConfigForPkg]): ShareOptions => {
+        const sharedOptionForPkg: CustomShareArgs = {
+          version: sharedConfigForPkg.version as string,
+          shareConfig: {
+            singleton: sharedConfigForPkg.singleton,
+            requiredVersion: sharedConfigForPkg?.requiredVersion ?? false,
+            eager: sharedConfigForPkg.eager,
+          },
+          scope: sharedConfigForPkg.shareScope,
+          // We just add a fake function that won't be used so that typescript is satisfied.
+          lib: () => null,
+          // We need to communicate this to the bundler so that it can inject the module into the remote entry.
+          importedModule: sharedConfigForPkg.import as string,
+        };
         return {
           ...sharedConfig,
-          [pkgName]: {
-            from: name,
-            version: sharedConfigForPkg.version,
-            shareConfig: {
-              singleton: sharedConfigForPkg.singleton,
-              requiredVersion: sharedConfigForPkg.requiredVersion,
-              eager: sharedConfigForPkg.eager,
-            },
-            importedModule: sharedConfigForPkg.import,
-            scope: sharedConfigForPkg.shareScope,
-          },
+          [pkgName]: sharedOptionForPkg,
         };
       },
       {},

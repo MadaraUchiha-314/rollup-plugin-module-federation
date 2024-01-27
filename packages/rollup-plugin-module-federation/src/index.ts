@@ -114,12 +114,12 @@ const REMOTE_ENTRY_NAME: string = 'remoteEntry';
 /**
  * All imports to shared/exposed/remotes will get converted to this expression.
  */
-const FEDERATED_IMPORT_EXPR: string = '__federatedImport__';
+const FEDERATED_IMPORT_EXPR: string = 'loadShare';
 const FEDERATED_IMPORT_MODULE_ID: string = '__federatedImport__';
 const FEDERATED_IMPORT_FILE_NAME: string = `${FEDERATED_IMPORT_MODULE_ID}.js`;
 const FEDERATED_IMPORT_NAME: string = 'federatedImport';
 const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
-const FEDERATED_IMPORT_FROM_REMOTE: string = '__federatedImportFromRemote__';
+const FEDERATED_IMPORT_FROM_REMOTE: string = 'loadRemote';
 
 const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
@@ -553,25 +553,58 @@ export default function federation(
          */
         const remoteEntryCode = `
           import { init as initModuleFederationRuntime } from '@module-federation/runtime';
-
+          ${Object.entries(initConfig?.shared ?? {})
+            .filter(
+              ([_, sharedConfigForPkg]) =>
+                sharedConfigForPkg.shareConfig?.eager,
+            )
+            .map(([_, sharedConfigForPkg]) => {
+              /**
+               * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
+               */
+              // @ts-ignore
+              return `import * as ${FEDERATED_EAGER_SHARED}${sharedConfigForPkg.importedModule} from '${sharedConfigForPkg.importedModule}';`;
+            })
+            .join('')}
           const init = (sharedScope) => {
             initModuleFederationRuntime({
               name: '${initConfig.name}',
               plugins: [],
               remotes: ${JSON.stringify(initConfig.remotes)},
-              shared: {${Object.entries(initConfig.shared ?? {}).map(
-                ([key, sharedConfig]) => {
-                  return `
-                    '${key}': {
-                      ${JSON.stringify(sharedConfig).replace(/^\{|\}$/g, '')},
-                      get: () => import('${
-                        // @ts-ignore
-                        sharedConfig.importedModule
-                      }').then((module) => () => module)
+              shared: {
+                ${Object.entries(initConfig.shared ?? {}).map(
+                  ([sharedPkg, sharedConfigForPkg]) => {
+                    /**
+                     * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
+                     * QUESTION: How does one even support import: false with this ?
+                     * Bug: https://github.com/module-federation/universe/issues/2020
+                     */
+                    if (!shared[sharedPkg]?.import) {
+                      return '';
                     }
+                    return `
+                      '${sharedPkg}': {
+                        ${JSON.stringify(sharedConfigForPkg).replace(
+                          /^\{|\}$/g,
+                          '',
+                        )},
+                        ${
+                          sharedConfigForPkg.shareConfig?.eager ? `
+                            lib: () => ${FEDERATED_EAGER_SHARED}${// @ts-ignore 
+                              sharedConfigForPkg.importedModule},
+                          `: `
+                            get: () => import('${
+                              // @ts-ignore
+                              sharedConfigForPkg.importedModule
+                            }').then((module) => () => module),
+                          `
+                        }
+                       
+                      },
                   `;
-                },
-              )}},
+                  }
+                ).join('')}
+              }
             });
           };
           const get = (module) => {
@@ -705,7 +738,7 @@ export default function federation(
             /**
              * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
              */
-            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '${FEDERATED_IMPORT_MODULE_ID}';${EOL}
+            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '@module-federation/runtime';${EOL}
           `);
         }
         return {
