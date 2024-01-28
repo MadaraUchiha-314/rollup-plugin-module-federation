@@ -6,7 +6,6 @@ import typescript from '@rollup/plugin-typescript';
 export default {
   input: {
     index: 'src/index.ts',
-    __federatedImport__: 'src/__federatedImport__.js',
   },
   output: {
     dir: 'dist',
