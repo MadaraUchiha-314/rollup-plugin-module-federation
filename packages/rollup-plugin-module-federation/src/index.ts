@@ -19,13 +19,7 @@ import {
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
-import type {
-  ExportAllDeclaration,
-  ImportDeclaration,
-  ImportExpression,
-  ExportNamedDeclaration,
-  Node,
-} from 'estree';
+import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
 import type { ModuleFederationPluginOptions } from '../types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
@@ -438,12 +432,11 @@ export default function federation(
               ([_, sharedConfigForPkg]) =>
                 sharedConfigForPkg.shareConfig?.eager,
             )
-            .map(([_, sharedConfigForPkg]) => {
+            .map(([moduleNameOrPath]) => {
               /**
                * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
                */
-              // @ts-ignore
-              return `import * as ${FEDERATED_EAGER_SHARED}${sharedConfigForPkg.importedModule} from '${sharedConfigForPkg.importedModule}';`;
+              return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
             })
             .join('')}
           const init = (sharedScope) => {
@@ -453,34 +446,31 @@ export default function federation(
               remotes: ${JSON.stringify(initConfig.remotes)},
               shared: {
                 ${Object.entries(initConfig.shared ?? {})
-                  .map(([sharedPkg, sharedConfigForPkg]) => {
+                  .map(([moduleNameOrPath, sharedConfigForPkg]) => {
                     /**
                      * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
                      * QUESTION: How does one even support import: false with this ?
                      * Bug: https://github.com/module-federation/universe/issues/2020
                      */
-                    if (!shared[sharedPkg]?.import) {
+                    if (!shared[moduleNameOrPath]?.import) {
                       return '';
                     }
                     return `
-                      '${sharedPkg}': {
+                      '${moduleNameOrPath}': {
                         ${JSON.stringify(sharedConfigForPkg).replace(
                           /^\{|\}$/g,
                           '',
                         )},
-                        version: '${getVersionForModule(
-                          shared[sharedPkg]?.import as string,
-                        )}',
+                        version: '${getVersionForModule(moduleNameOrPath)}',
                         ${
                           sharedConfigForPkg.shareConfig?.eager
                             ? `
-                            lib: () => ${FEDERATED_EAGER_SHARED}${shared[sharedPkg]?.import},
+                            lib: () => ${FEDERATED_EAGER_SHARED}${moduleNameOrPath},
                           `
                             : `
-                            get: () => import('${shared[sharedPkg]?.import}').then((module) => () => module),
+                            get: () => import('${moduleNameOrPath}').then((module) => () => module),
                           `
                         }
-                       
                       },
                   `;
                   })
@@ -560,7 +550,7 @@ export default function federation(
                   federatedModuleInfo[
                     resolvedModulePath
                   ] as SharedOrExposedModuleInfo
-                ).chunkPath;
+                ).moduleNameOrPath;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,

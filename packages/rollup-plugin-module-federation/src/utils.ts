@@ -13,10 +13,7 @@ import type {
   SharedObject,
   ExposesObject,
   RemotesObject,
-  ShareOptions,
-  CustomShareArgs,
-  SharedOrExposedModuleInfo,
-  FederatedModuleInfo,
+  ShareInfo,
 } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
@@ -248,9 +245,9 @@ export function getInitConfig(
 ): UserOptions {
   return {
     name,
-    shared: Object.entries(shared).reduce<ShareOptions>(
-      (sharedConfig, [pkgName, sharedConfigForPkg]): ShareOptions => {
-        const sharedOptionForPkg: CustomShareArgs = {
+    shared: Object.entries(shared).reduce<ShareInfo>(
+      (sharedConfig, [pkgName, sharedConfigForPkg]): ShareInfo => {
+        const sharedOptionForPkg = {
           version: sharedConfigForPkg.version as string,
           shareConfig: {
             singleton: sharedConfigForPkg.singleton,
@@ -259,13 +256,14 @@ export function getInitConfig(
           },
           scope: sharedConfigForPkg.shareScope,
           // We just add a fake function that won't be used so that typescript is satisfied.
+          // We either need lib() or get() and we can't provide get()
           lib: () => null,
-          // We need to communicate this to the bundler so that it can inject the module into the remote entry.
-          importedModule: sharedConfigForPkg.import as string,
         };
         return {
           ...sharedConfig,
-          [pkgName]: sharedOptionForPkg,
+          // The key here is the module name or path to the imported module.
+          [sharedConfigForPkg.import ? sharedConfigForPkg.import : pkgName]:
+            sharedOptionForPkg,
         };
       },
       {},

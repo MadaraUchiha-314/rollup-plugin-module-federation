@@ -4,7 +4,9 @@ import type { ShareArgs } from '@module-federation/runtime/dist/type.cjs.js';
  * We rewrite the type for SharedObject to be that of the most verbose definition.
  */
 export type SharedObject = {
-  [index: string]: SharedConfig;
+  [index: string]: SharedConfig & {
+    import: string | false;
+  };
 };
 
 /**
@@ -21,10 +23,8 @@ export type RemotesObject = {
   [index: string]: RemotesConfig;
 };
 
-export type CustomShareArgs = ShareArgs & { importedModule: string };
-
-export type ShareOptions = {
-  [pkgName: string]: CustomShareArgs;
+export type ShareInfo = {
+  [pkgName: string]: ShareArgs;
 };
 
 export type Nullable<T> = T | null;
