@@ -582,9 +582,7 @@ export default function federation(
         /**
          * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
          */
-        if (
-          id === REMOTE_ENTRY_MODULE_ID
-        ) {
+        if (id === REMOTE_ENTRY_MODULE_ID) {
           return null;
         }
         const self = this;
