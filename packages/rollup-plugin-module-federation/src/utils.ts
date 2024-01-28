@@ -15,6 +15,8 @@ import type {
   RemotesObject,
   ShareOptions,
   CustomShareArgs,
+  SharedOrExposedModuleInfo,
+  FederatedModuleInfo,
 } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {

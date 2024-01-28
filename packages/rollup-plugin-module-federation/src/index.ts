@@ -30,69 +30,14 @@ import type { ModuleFederationPluginOptions } from '../types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
-type Nullable<T> = T | null;
-
-interface ModuleVersionInfo {
-  version: Nullable<string> | false;
-  requiredVersion: Nullable<string> | false;
-  strictVersion: Nullable<boolean>;
-  singleton: Nullable<boolean>;
-  eager: Nullable<boolean>;
-}
-
-enum FederatedModuleType {
-  REMOTE = 'remote',
-  EXPOSED = 'exposed',
-  SHARED = 'shared',
-}
-
-interface BaseModuleInfo {
-  name: string;
-  moduleNameOrPath: string;
-  sanitizedModuleNameOrPath: string | null;
-  type: FederatedModuleType;
-}
-
-interface RemoteModuleInfo extends BaseModuleInfo {
-  type: FederatedModuleType.REMOTE;
-  initialized: boolean;
-  module: any;
-  remoteType: string;
-}
-
-interface SharedOrExposedModuleInfo extends BaseModuleInfo {
-  chunkPath: string;
-  versionInfo: ModuleVersionInfo;
-  type: FederatedModuleType.SHARED | FederatedModuleType.EXPOSED;
-}
-
-type FederatedModuleInfo = SharedOrExposedModuleInfo | RemoteModuleInfo;
-
-interface ModuleMapEntry {
-  name: string;
-  moduleNameOrPath: string;
-  chunkPath: string | null;
-  type: FederatedModuleType;
-  version: string | null;
-  requiredVersion: string | null;
-  singleton: boolean | null;
-  strictVersion: boolean | null;
-  remoteType?: string;
-}
-
-interface FederatedModule {
-  name: string;
-  moduleNameOrPath: string;
-  type: FederatedModuleType;
-}
-
-type ModuleMap = Record<string, ModuleMapEntry>;
-
-type NodesToRewrite =
-  | ImportDeclaration
-  | ImportExpression
-  | ExportNamedDeclaration
-  | ExportAllDeclaration;
+import {
+  NodesToRewrite,
+  FederatedModule,
+  FederatedModuleInfo,
+  SharedOrExposedModuleInfo,
+  FederatedModuleType,
+  ModuleVersionInfo,
+} from './types';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -115,8 +60,8 @@ const REMOTE_ENTRY_NAME: string = 'remoteEntry';
  * All imports to shared/exposed/remotes will get converted to this expression.
  */
 const FEDERATED_IMPORT_EXPR: string = 'loadShare';
-const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
 const FEDERATED_IMPORT_FROM_REMOTE: string = 'loadRemote';
+const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
 
 const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
@@ -146,7 +91,7 @@ export function getFederatedImportStatementForNode(
             /**
              * import ABC from 'pqr';
              */
-            if (federatedModuleType === FederatedModuleType.REMOTE) {
+            if (federatedModuleType === 'remote') {
               /**
                * When it is a default import from a remote module we have to pass special hints to the module loader.
                * This is to load the default exported entity.
@@ -268,11 +213,6 @@ export default function federation(
    */
   const federatedModuleInfo: Record<string, FederatedModuleInfo> = {};
   /**
-   * Module Map cache
-   */
-  let moduleMap: ModuleMap = {};
-
-  /**
    * Get the version of module.
    * Module version if not specified in the federation config needs to be taken from the package.json
    * @param {string} moduleNameOrPath The module name for which a version required.
@@ -295,7 +235,7 @@ export default function federation(
     /**
      * If its a remote module, then there's no notion of versions.
      */
-    if (type === FederatedModuleType.REMOTE) {
+    if (type === 'remote') {
       return versionInfo;
     }
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
@@ -315,18 +255,6 @@ export default function federation(
   };
 
   /**
-   * Get the resolved version for the module.
-   * @param {string} moduleNameOrPath The module name for which a version required.
-   * @returns
-   */
-  const getVersionForModule = (moduleNameOrPath: string) =>
-    (
-      Object.values(federatedModuleInfo).find(
-        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-      ) as SharedOrExposedModuleInfo
-    ).versionInfo.version ?? null;
-
-  /**
    * Checks whether the import is from a remote module or not.
    * @param importSource The source from which we are importing.
    */
@@ -338,6 +266,18 @@ export default function federation(
     }
     return false;
   };
+
+  /**
+   * Get the resolved version for the module.
+   * @param {string} moduleNameOrPath The module name for which a version required.
+   * @returns
+   */
+  const getVersionForModule = (moduleNameOrPath: string) =>
+  (
+    Object.values(federatedModuleInfo).find(
+      (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+    ) as SharedOrExposedModuleInfo
+  ).versionInfo.version ?? null;
 
   return {
     name: 'rollup-plugin-federation',
@@ -360,7 +300,7 @@ export default function federation(
             moduleNameOrPath: sharedModuleHints?.import
               ? sharedModuleHints.import
               : sharedModuleName,
-            type: FederatedModuleType.SHARED,
+            type: 'shared',
           }),
         ),
       );
@@ -375,7 +315,7 @@ export default function federation(
              * TODO: We don't current support that import be an array. What does that even mean ? Need further clarification.
              */
             moduleNameOrPath: exposedModulePath.import as string,
-            type: FederatedModuleType.EXPOSED,
+            type: 'exposed',
           }),
         ),
       );
@@ -387,7 +327,7 @@ export default function federation(
           ([remoteName, remoteEntity]): FederatedModule => ({
             name: remoteName,
             moduleNameOrPath: remoteEntity.external as string,
-            type: FederatedModuleType.REMOTE,
+            type: 'remote',
           }),
         ),
       );
@@ -400,7 +340,7 @@ export default function federation(
         /**
          * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
          */
-        if (type === FederatedModuleType.REMOTE) {
+        if (type === 'remote') {
           federatedModuleInfo[moduleName] = {
             name: moduleName,
             moduleNameOrPath,
@@ -505,7 +445,8 @@ export default function federation(
               // @ts-ignore
               return `import * as ${FEDERATED_EAGER_SHARED}${sharedConfigForPkg.importedModule} from '${sharedConfigForPkg.importedModule}';`;
             })
-            .join('')}
+            .join('')
+          }
           const init = (sharedScope) => {
             initModuleFederationRuntime({
               name: '${initConfig.name}',
@@ -528,18 +469,17 @@ export default function federation(
                           /^\{|\}$/g,
                           '',
                         )},
+                        version: '${getVersionForModule(shared[sharedPkg]?.import as string)}',
                         ${
                           sharedConfigForPkg.shareConfig?.eager
                             ? `
                             lib: () => ${FEDERATED_EAGER_SHARED}${
-                              // @ts-ignore
-                              sharedConfigForPkg.importedModule
+                              shared[sharedPkg]?.import
                             },
                           `
                             : `
                             get: () => import('${
-                              // @ts-ignore
-                              sharedConfigForPkg.importedModule
+                              shared[sharedPkg]?.import
                             }').then((module) => () => module),
                           `
                         }
@@ -547,7 +487,8 @@ export default function federation(
                       },
                   `;
                   })
-                  .join('')}
+                  .join('')
+                }
               }
             });
           };
@@ -561,7 +502,8 @@ export default function federation(
                     }
                   `,
                 )
-                .join('')}
+                .join('')
+              }
             }
           };
           export { init, get };
@@ -631,7 +573,7 @@ export default function federation(
                       importStmt: FEDERATED_IMPORT_EXPR,
                       entityToImport: chunkName,
                     },
-                    FederatedModuleType.SHARED,
+                    'shared',
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,
@@ -653,7 +595,7 @@ export default function federation(
                       // @ts-ignore
                       entityToImport: node?.source?.value,
                     },
-                    FederatedModuleType.REMOTE,
+                    'remote',
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,
