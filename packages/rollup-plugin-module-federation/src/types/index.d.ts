@@ -35,7 +35,7 @@ export type ModuleVersionInfo = {
   strictVersion: Nullable<boolean>;
   singleton: Nullable<boolean>;
   eager: Nullable<boolean>;
-}
+};
 
 export type FederatedModuleType = 'remote' | 'exposed' | 'shared';
 
@@ -44,20 +44,20 @@ export type BaseModuleInfo = {
   moduleNameOrPath: string;
   sanitizedModuleNameOrPath: string | null;
   type: FederatedModuleType;
-}
+};
 
 export type RemoteModuleInfo = BaseModuleInfo & {
   type: FederatedModuleType;
   initialized: boolean;
   module: any;
   remoteType: string;
-}
+};
 
 export type SharedOrExposedModuleInfo = BaseModuleInfo & {
   chunkPath: string;
   versionInfo: ModuleVersionInfo;
   type: FederatedModuleType;
-}
+};
 
 export type FederatedModuleInfo = SharedOrExposedModuleInfo | RemoteModuleInfo;
 
@@ -71,14 +71,13 @@ export type ModuleMapEntry = {
   singleton: boolean | null;
   strictVersion: boolean | null;
   remoteType?: string;
-}
+};
 
 export type FederatedModule = {
   name: string;
   moduleNameOrPath: string;
   type: FederatedModuleType;
-}
-
+};
 
 export type NodesToRewrite =
   | ImportDeclaration

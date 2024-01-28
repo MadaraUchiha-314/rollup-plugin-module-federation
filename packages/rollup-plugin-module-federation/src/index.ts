@@ -273,11 +273,11 @@ export default function federation(
    * @returns
    */
   const getVersionForModule = (moduleNameOrPath: string) =>
-  (
-    Object.values(federatedModuleInfo).find(
-      (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-    ) as SharedOrExposedModuleInfo
-  ).versionInfo.version ?? null;
+    (
+      Object.values(federatedModuleInfo).find(
+        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+      ) as SharedOrExposedModuleInfo
+    ).versionInfo.version ?? null;
 
   return {
     name: 'rollup-plugin-federation',
@@ -445,8 +445,7 @@ export default function federation(
               // @ts-ignore
               return `import * as ${FEDERATED_EAGER_SHARED}${sharedConfigForPkg.importedModule} from '${sharedConfigForPkg.importedModule}';`;
             })
-            .join('')
-          }
+            .join('')}
           const init = (sharedScope) => {
             initModuleFederationRuntime({
               name: '${initConfig.name}',
@@ -469,26 +468,23 @@ export default function federation(
                           /^\{|\}$/g,
                           '',
                         )},
-                        version: '${getVersionForModule(shared[sharedPkg]?.import as string)}',
+                        version: '${getVersionForModule(
+                          shared[sharedPkg]?.import as string,
+                        )}',
                         ${
                           sharedConfigForPkg.shareConfig?.eager
                             ? `
-                            lib: () => ${FEDERATED_EAGER_SHARED}${
-                              shared[sharedPkg]?.import
-                            },
+                            lib: () => ${FEDERATED_EAGER_SHARED}${shared[sharedPkg]?.import},
                           `
                             : `
-                            get: () => import('${
-                              shared[sharedPkg]?.import
-                            }').then((module) => () => module),
+                            get: () => import('${shared[sharedPkg]?.import}').then((module) => () => module),
                           `
                         }
                        
                       },
                   `;
                   })
-                  .join('')
-                }
+                  .join('')}
               }
             });
           };
@@ -502,8 +498,7 @@ export default function federation(
                     }
                   `,
                 )
-                .join('')
-              }
+                .join('')}
             }
           };
           export { init, get };
