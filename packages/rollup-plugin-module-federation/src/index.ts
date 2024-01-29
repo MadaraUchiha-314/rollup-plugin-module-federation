@@ -80,10 +80,11 @@ export function getFederatedImportStatementForNode(
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
   const moduleSpecifier = `${importStmt}('${entityToImport}')`;
-  const getModuleAsync =
-    federatedModuleType === 'remote'
-      ? moduleSpecifier
-      : `(await ${moduleSpecifier})()`;
+  const getModuleOrFactoryAsync = `await ${moduleSpecifier}`;
+  /**
+   * loadRemote directly returns the module, while loadShare returns a factory which returns the module.
+   */
+  const getModule = federatedModuleType === 'remote' ? `${getModuleOrFactoryAsync}` :`(${getModuleOrFactoryAsync})()`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       (node as ImportDeclaration).specifiers.forEach((specifier) => {
@@ -94,16 +95,15 @@ export function getFederatedImportStatementForNode(
              */
             if (federatedModuleType === 'remote') {
               /**
-               * When it is a default import from a remote module we have to pass special hints to the module loader.
-               * This is to load the default exported entity.
+               * When it is a default import from a remote module we have to extract the default module ourselves.
+               * In case it's not a remote, the bundler usually does it for us.
                */
-              const defaultImportModuleSpecifier = `${importStmt}('${entityToImport}')`;
               federatedImportStms.push(
-                `const ${specifier.local.name} = await ${defaultImportModuleSpecifier}`,
+                `const ${specifier.local.name} = ${getModule}.default`,
               );
             } else {
               federatedImportStms.push(
-                `const ${specifier.local.name} = ${getModuleAsync}`,
+                `const ${specifier.local.name} = ${getModule}`,
               );
             }
             break;
@@ -113,7 +113,7 @@ export function getFederatedImportStatementForNode(
              * import * as ABC from 'pqr';
              */
             federatedImportStms.push(
-              `const ${specifier.local.name} = ${getModuleAsync}`,
+              `const ${specifier.local.name} = ${getModule}`,
             );
             break;
           }
@@ -123,14 +123,14 @@ export function getFederatedImportStatementForNode(
                * import { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.imported.name}: ${specifier.local.name} } = ${getModuleAsync}`,
+                `const { ${specifier.imported.name}: ${specifier.local.name} } = ${getModule}`,
               );
             } else {
               /**
                * import { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = ${getModuleAsync}`,
+                `const { ${specifier.local.name} } = ${getModule}`,
               );
             }
             break;
@@ -149,7 +149,7 @@ export function getFederatedImportStatementForNode(
       /**
        * import('pqr')
        */
-      federatedImportStms.push(getModuleAsync);
+      federatedImportStms.push(getModule);
       break;
     }
     case 'ExportNamedDeclaration': {
@@ -161,14 +161,14 @@ export function getFederatedImportStatementForNode(
                * export { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = ${getModuleAsync}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
+                `const { ${specifier.local.name} } = ${getModule}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
               );
             } else {
               /**
                * export { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = ${getModuleAsync}; export { ${specifier.local.name} }`,
+                `const { ${specifier.local.name} } = ${getModule}; export { ${specifier.local.name} }`,
               );
             }
             break;
@@ -184,7 +184,7 @@ export function getFederatedImportStatementForNode(
       break;
     }
   }
-  const federatedImportStmsStr = federatedImportStms.join(';');
+  const federatedImportStmsStr = federatedImportStms.join(';\n');
   return federatedImportStmsStr;
 }
 
