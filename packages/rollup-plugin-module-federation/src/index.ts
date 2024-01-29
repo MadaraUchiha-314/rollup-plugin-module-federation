@@ -57,6 +57,9 @@ const FEDERATED_IMPORT_EXPR: string = 'loadShare';
 const FEDERATED_IMPORT_FROM_REMOTE: string = 'loadRemote';
 const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
 
+const FEDERATION_RUNTIME_PACKAGE = '@module-federation/runtime';
+const FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME = '__module_federation_runtime__';
+
 const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
 const __filename: string = fileURLToPath(import.meta.url);
@@ -619,6 +622,14 @@ export default function federation(
       const manualChunks: ManualChunksOption = (id) => {
         if (id === REMOTE_ENTRY_MODULE_ID) {
           return REMOTE_ENTRY_MODULE_ID;
+        }
+        /**
+         * We need to forcefully create a separate chunk for the @module-federation/runtime package
+         * Rollup shouldn't include this with any other modules as those might include top-level awaits calls to loadShare or loadRemote
+         * These calls cannot be present before the container is initialized.
+         */
+        if (id.includes(FEDERATION_RUNTIME_PACKAGE)) {
+          return FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME;
         }
         const resolvedModulePath = getModulePathFromResolvedId(id);
         if (
