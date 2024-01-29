@@ -149,7 +149,7 @@ export function getFederatedImportStatementForNode(
       /**
        * import('pqr')
        */
-      federatedImportStms.push(moduleSpecifier);
+      federatedImportStms.push(getModuleAsync);
       break;
     }
     case 'ExportNamedDeclaration': {
@@ -547,13 +547,14 @@ export default function federation(
                 resolvedId?.id as string,
               );
               /**
-               * We treat shared, exposed modules differently from remote modules.
+               * We treat shared modules differently from remote modules.
+               * We don't need to do anything to exposed modules ?
                */
               if (
                 Object.prototype.hasOwnProperty.call(
                   federatedModuleInfo,
                   resolvedModulePath,
-                )
+                ) && federatedModuleInfo[resolvedModulePath].type === 'shared'
               ) {
                 chunkHasFederatedImports = true;
                 const chunkName = (
