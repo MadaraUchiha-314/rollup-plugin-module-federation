@@ -554,7 +554,8 @@ export default function federation(
                 Object.prototype.hasOwnProperty.call(
                   federatedModuleInfo,
                   resolvedModulePath,
-                ) && federatedModuleInfo[resolvedModulePath].type === 'shared'
+                ) &&
+                federatedModuleInfo[resolvedModulePath].type === 'shared'
               ) {
                 chunkHasFederatedImports = true;
                 const chunkName = (
