@@ -86,7 +86,7 @@ export function getFederatedImportStatementForNode(
    */
   const getModule =
     federatedModuleType === 'remote'
-      ? `${getModuleOrFactoryAsync}`
+      ? `(${getModuleOrFactoryAsync})`
       : `(${getModuleOrFactoryAsync})()`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
