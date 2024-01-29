@@ -278,7 +278,8 @@ export function getInitConfig(
         name: remoteName,
         entry: remoteConfig.external,
         shareScope: remoteConfig.shareScope,
-        type: (remoteType === 'module' || remoteType === 'import') ? 'esm': 'global',
+        type:
+          remoteType === 'module' || remoteType === 'import' ? 'esm' : 'global',
       };
     }),
   };

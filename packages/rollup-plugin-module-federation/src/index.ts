@@ -80,7 +80,10 @@ export function getFederatedImportStatementForNode(
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
   const moduleSpecifier = `${importStmt}('${entityToImport}')`;
-  const getModuleAsync = federatedModuleType === 'remote' ? moduleSpecifier: `(await ${moduleSpecifier})()`;
+  const getModuleAsync =
+    federatedModuleType === 'remote'
+      ? moduleSpecifier
+      : `(await ${moduleSpecifier})()`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       (node as ImportDeclaration).specifiers.forEach((specifier) => {
@@ -195,7 +198,7 @@ export default function federation(
   const exposes = getExposesConfig(federationConfig.exposes || {});
 
   const remotes = getRemotesConfig(federationConfig.remotes || {});
-  
+
   const remoteType = federationConfig?.remoteType ?? 'module';
 
   const initConfig = getInitConfig(name, shared, remotes, remoteType);
