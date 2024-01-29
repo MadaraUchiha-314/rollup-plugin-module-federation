@@ -84,7 +84,10 @@ export function getFederatedImportStatementForNode(
   /**
    * loadRemote directly returns the module, while loadShare returns a factory which returns the module.
    */
-  const getModule = federatedModuleType === 'remote' ? `${getModuleOrFactoryAsync}` :`(${getModuleOrFactoryAsync})()`;
+  const getModule =
+    federatedModuleType === 'remote'
+      ? `${getModuleOrFactoryAsync}`
+      : `(${getModuleOrFactoryAsync})()`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       (node as ImportDeclaration).specifiers.forEach((specifier) => {
