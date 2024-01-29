@@ -39,9 +39,7 @@ export const federationconfig = (bundler) => ({
       eager: true,
     },
     'react-dom': {},
-    uuid: {
-      import: false,
-    },
+    uuid: {},
     redux: {},
   },
 });
