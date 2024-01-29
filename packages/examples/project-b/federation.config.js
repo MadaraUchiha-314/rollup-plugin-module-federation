@@ -6,7 +6,6 @@ export const federationconfig = {
   },
   shared: {
     react: {
-      import: false,
     },
     axios: {},
   },

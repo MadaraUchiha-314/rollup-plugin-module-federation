@@ -242,6 +242,7 @@ export function getInitConfig(
   name: string,
   shared: SharedObject,
   remotes: RemotesObject,
+  remoteType: string,
 ): UserOptions {
   return {
     name,
@@ -277,6 +278,7 @@ export function getInitConfig(
         name: remoteName,
         entry: remoteConfig.external,
         shareScope: remoteConfig.shareScope,
+        type: (remoteType === 'module' || remoteType === 'import') ? 'esm': 'global',
       };
     }),
   };

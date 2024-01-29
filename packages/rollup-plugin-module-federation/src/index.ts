@@ -80,6 +80,7 @@ export function getFederatedImportStatementForNode(
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
   const moduleSpecifier = `${importStmt}('${entityToImport}')`;
+  const getModuleAsync = federatedModuleType === 'remote' ? moduleSpecifier: `(await ${moduleSpecifier})()`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       (node as ImportDeclaration).specifiers.forEach((specifier) => {
@@ -93,13 +94,13 @@ export function getFederatedImportStatementForNode(
                * When it is a default import from a remote module we have to pass special hints to the module loader.
                * This is to load the default exported entity.
                */
-              const defaultImportModuleSpecifier = `${importStmt}('${entityToImport}', true)`;
+              const defaultImportModuleSpecifier = `${importStmt}('${entityToImport}')`;
               federatedImportStms.push(
                 `const ${specifier.local.name} = await ${defaultImportModuleSpecifier}`,
               );
             } else {
               federatedImportStms.push(
-                `const ${specifier.local.name} = await ${moduleSpecifier}`,
+                `const ${specifier.local.name} = ${getModuleAsync}`,
               );
             }
             break;
@@ -109,7 +110,7 @@ export function getFederatedImportStatementForNode(
              * import * as ABC from 'pqr';
              */
             federatedImportStms.push(
-              `const ${specifier.local.name} = await ${moduleSpecifier}`,
+              `const ${specifier.local.name} = ${getModuleAsync}`,
             );
             break;
           }
@@ -119,14 +120,14 @@ export function getFederatedImportStatementForNode(
                * import { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`,
+                `const { ${specifier.imported.name}: ${specifier.local.name} } = ${getModuleAsync}`,
               );
             } else {
               /**
                * import { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}`,
+                `const { ${specifier.local.name} } = ${getModuleAsync}`,
               );
             }
             break;
@@ -157,14 +158,14 @@ export function getFederatedImportStatementForNode(
                * export { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
+                `const { ${specifier.local.name} } = ${getModuleAsync}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
               );
             } else {
               /**
                * export { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
+                `const { ${specifier.local.name} } = ${getModuleAsync}; export { ${specifier.local.name} }`,
               );
             }
             break;
@@ -194,12 +195,12 @@ export default function federation(
   const exposes = getExposesConfig(federationConfig.exposes || {});
 
   const remotes = getRemotesConfig(federationConfig.remotes || {});
+  
+  const remoteType = federationConfig?.remoteType ?? 'module';
 
-  const initConfig = getInitConfig(name, shared, remotes);
+  const initConfig = getInitConfig(name, shared, remotes, remoteType);
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
-
-  const remoteType = federationConfig?.remoteType ?? 'module';
 
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
@@ -466,9 +467,12 @@ export default function federation(
                         )},
                         version: '${getVersionForModule(moduleNameOrPath)}',
                         ${
+                          /**
+                           * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                           */
                           sharedConfigForPkg.shareConfig?.eager
                             ? `
-                            lib: () => ${FEDERATED_EAGER_SHARED}${moduleNameOrPath},
+                            get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),
                           `
                             : `
                             get: () => import('${moduleNameOrPath}').then((module) => () => module),
