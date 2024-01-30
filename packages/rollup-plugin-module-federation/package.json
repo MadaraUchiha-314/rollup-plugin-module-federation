@@ -67,7 +67,7 @@
     "semver": "7.5.4",
     "@module-federation/sdk": "0.0.7",
     "@module-federation/runtime": "0.0.7"
-  },
+   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "25.0.3",
     "@rollup/plugin-node-resolve": "15.1.0",
@@ -81,6 +81,7 @@
     "typescript": "5.2.2",
     "tslib": "2.6.2",
     "@types/estree": "1.0.5",
-    "type-fest": "4.7.0"
+    "type-fest": "4.7.0",
+    "@rollup/plugin-json": "6.1.0"
   }
 }

@@ -506,6 +506,9 @@ export default function federation(
           };
           export { init, get };
         `;
+        /**
+         * TODO: We need human readable good code. Atleast until the terser plugin minifies it :p
+         */
         return remoteEntryCode;
       }
       return null;
