@@ -1,17 +1,32 @@
 import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { PACKAGE_JSON } from './constants.js';
+import {
+  generateExposeFilename,
+  generateShareFilename,
+} from '@module-federation/sdk';
+import type { UserOptions } from '@module-federation/runtime/dist/type.cjs.js';
 
 import type { PackageJson } from 'type-fest';
 import type { Exposes, Remotes, Shared } from '../types';
-import type { SharedObject, ExposesObject, RemotesObject } from './types';
+import type {
+  SharedObject,
+  ExposesObject,
+  RemotesObject,
+  ShareInfo,
+} from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
   return id.split('?')[0];
 }
 
 export function sanitizeModuleName(name: string): string {
-  return name.replace(/\.|\//g, '_');
+  /**
+   * Removes file name extensions from the module names.
+   * Exposed modeules or even shared modules in some cases have file extension in them.
+   * Doesn't seem like the module-federation/sdk provides any functions to remove this.
+   */
+  return name.replace(/\.[^/.]+$/, '');
 }
 
 export function getChunkNameForModule({
@@ -21,7 +36,19 @@ export function getChunkNameForModule({
   sanitizedModuleNameOrPath: string | null;
   type: 'shared' | 'exposed' | 'remote';
 }) {
-  return `__federated__${type}__${sanitizedModuleNameOrPath}`;
+  /**
+   * Returning an empty string might cause undefined behavior.
+   */
+  if (!sanitizedModuleNameOrPath) {
+    throw Error(`Invalid module name provided: ${sanitizeModuleName}`);
+  }
+  if (type === 'shared') {
+    return generateShareFilename(sanitizedModuleNameOrPath, false);
+  }
+  if (type === 'exposed') {
+    return generateExposeFilename(sanitizedModuleNameOrPath, false);
+  }
+  throw Error(`Generating chunk name for ${type} is not supported`);
 }
 
 export function getFileNameFromChunkName(chunkName: string): string {
@@ -79,7 +106,13 @@ export function getSharedConfig(shared: Shared): SharedObject {
         } else if (typeof sharedEntity === 'object') {
           return {
             ...sharedObject,
-            [key]: sharedEntity,
+            [key]: {
+              /**
+               * If someone is providing an explcit import, it will be used, else we use the key itself as the import.
+               */
+              import: key,
+              ...sharedEntity,
+            },
           };
         } else {
           throw Error(
@@ -203,4 +236,51 @@ export function getRemotesConfig(remotes: Remotes): RemotesObject {
       {},
     );
   }
+}
+
+export function getInitConfig(
+  name: string,
+  shared: SharedObject,
+  remotes: RemotesObject,
+  remoteType: string,
+): UserOptions {
+  return {
+    name,
+    shared: Object.entries(shared).reduce<ShareInfo>(
+      (sharedConfig, [pkgName, sharedConfigForPkg]): ShareInfo => {
+        const sharedOptionForPkg = {
+          version: sharedConfigForPkg.version as string,
+          shareConfig: {
+            singleton: sharedConfigForPkg.singleton,
+            requiredVersion: sharedConfigForPkg?.requiredVersion ?? false,
+            eager: sharedConfigForPkg.eager,
+          },
+          scope: sharedConfigForPkg.shareScope,
+          // We just add a fake function that won't be used so that typescript is satisfied.
+          // We either need lib() or get() and we can't provide get()
+          lib: () => null,
+        };
+        return {
+          ...sharedConfig,
+          // The key here is the module name or path to the imported module.
+          [sharedConfigForPkg.import ? sharedConfigForPkg.import : pkgName]:
+            sharedOptionForPkg,
+        };
+      },
+      {},
+    ),
+    /**
+     * TODO: Find a type definition of how plugins can be injected during build time.
+     */
+    plugins: [],
+    remotes: Object.entries(remotes).map(([remoteName, remoteConfig]) => {
+      return {
+        name: remoteName,
+        entry: remoteConfig.external,
+        shareScope: remoteConfig.shareScope,
+        type:
+          remoteType === 'module' || remoteType === 'import' ? 'esm' : 'global',
+      };
+    }),
+  };
 }

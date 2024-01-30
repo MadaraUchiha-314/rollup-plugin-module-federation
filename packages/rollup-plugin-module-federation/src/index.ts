@@ -15,83 +15,23 @@ import {
   getSharedConfig,
   getExposesConfig,
   getRemotesConfig,
+  getInitConfig,
 } from './utils.js';
 import { PACKAGE_JSON } from './constants.js';
 
-import type {
-  ExportAllDeclaration,
-  ImportDeclaration,
-  ImportExpression,
-  ExportNamedDeclaration,
-  Node,
-} from 'estree';
+import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
 import type { ModuleFederationPluginOptions } from '../types';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
-type Nullable<T> = T | null;
-
-interface ModuleVersionInfo {
-  version: Nullable<string> | false;
-  requiredVersion: Nullable<string> | false;
-  strictVersion: Nullable<boolean>;
-  singleton: Nullable<boolean>;
-  eager: Nullable<boolean>;
-}
-
-enum FederatedModuleType {
-  REMOTE = 'remote',
-  EXPOSED = 'exposed',
-  SHARED = 'shared',
-}
-
-interface BaseModuleInfo {
-  name: string;
-  moduleNameOrPath: string;
-  sanitizedModuleNameOrPath: string | null;
-  type: FederatedModuleType;
-}
-
-interface RemoteModuleInfo extends BaseModuleInfo {
-  type: FederatedModuleType.REMOTE;
-  initialized: boolean;
-  module: any;
-  remoteType: string;
-}
-
-interface SharedOrExposedModuleInfo extends BaseModuleInfo {
-  chunkPath: string;
-  versionInfo: ModuleVersionInfo;
-  type: FederatedModuleType.SHARED | FederatedModuleType.EXPOSED;
-}
-
-type FederatedModuleInfo = SharedOrExposedModuleInfo | RemoteModuleInfo;
-
-interface ModuleMapEntry {
-  name: string;
-  moduleNameOrPath: string;
-  chunkPath: string | null;
-  type: FederatedModuleType;
-  version: string | null;
-  requiredVersion: string | null;
-  singleton: boolean | null;
-  strictVersion: boolean | null;
-  remoteType?: string;
-}
-
-interface FederatedModule {
-  name: string;
-  moduleNameOrPath: string;
-  type: FederatedModuleType;
-}
-
-type ModuleMap = Record<string, ModuleMapEntry>;
-
-type NodesToRewrite =
-  | ImportDeclaration
-  | ImportExpression
-  | ExportNamedDeclaration
-  | ExportAllDeclaration;
+import {
+  NodesToRewrite,
+  FederatedModule,
+  FederatedModuleInfo,
+  SharedOrExposedModuleInfo,
+  FederatedModuleType,
+  ModuleVersionInfo,
+} from './types';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -113,12 +53,12 @@ const REMOTE_ENTRY_NAME: string = 'remoteEntry';
 /**
  * All imports to shared/exposed/remotes will get converted to this expression.
  */
-const FEDERATED_IMPORT_EXPR: string = '__federatedImport__';
-const FEDERATED_IMPORT_MODULE_ID: string = '__federatedImport__';
-const FEDERATED_IMPORT_FILE_NAME: string = `${FEDERATED_IMPORT_MODULE_ID}.js`;
-const FEDERATED_IMPORT_NAME: string = 'federatedImport';
+const FEDERATED_IMPORT_EXPR: string = 'loadShare';
+const FEDERATED_IMPORT_FROM_REMOTE: string = 'loadRemote';
 const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
-const FEDERATED_IMPORT_FROM_REMOTE: string = '__federatedImportFromRemote__';
+
+const FEDERATION_RUNTIME_PACKAGE = '@module-federation/runtime';
+const FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME = '__module_federation_runtime__';
 
 const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
@@ -140,6 +80,14 @@ export function getFederatedImportStatementForNode(
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
   const moduleSpecifier = `${importStmt}('${entityToImport}')`;
+  const getModuleOrFactoryAsync = `await ${moduleSpecifier}`;
+  /**
+   * loadRemote directly returns the module, while loadShare returns a factory which returns the module.
+   */
+  const getModule =
+    federatedModuleType === 'remote'
+      ? `(${getModuleOrFactoryAsync})`
+      : `(${getModuleOrFactoryAsync})()`;
   switch (node.type) {
     case IMPORTS_TO_FEDERATED_IMPORTS_NODES.ImportDeclaration: {
       (node as ImportDeclaration).specifiers.forEach((specifier) => {
@@ -148,18 +96,17 @@ export function getFederatedImportStatementForNode(
             /**
              * import ABC from 'pqr';
              */
-            if (federatedModuleType === FederatedModuleType.REMOTE) {
+            if (federatedModuleType === 'remote') {
               /**
-               * When it is a default import from a remote module we have to pass special hints to the module loader.
-               * This is to load the default exported entity.
+               * When it is a default import from a remote module we have to extract the default module ourselves.
+               * In case it's not a remote, the bundler usually does it for us.
                */
-              const defaultImportModuleSpecifier = `${importStmt}('${entityToImport}', true)`;
               federatedImportStms.push(
-                `const ${specifier.local.name} = await ${defaultImportModuleSpecifier}`,
+                `const ${specifier.local.name} = ${getModule}.default`,
               );
             } else {
               federatedImportStms.push(
-                `const ${specifier.local.name} = await ${moduleSpecifier}`,
+                `const ${specifier.local.name} = ${getModule}`,
               );
             }
             break;
@@ -169,7 +116,7 @@ export function getFederatedImportStatementForNode(
              * import * as ABC from 'pqr';
              */
             federatedImportStms.push(
-              `const ${specifier.local.name} = await ${moduleSpecifier}`,
+              `const ${specifier.local.name} = ${getModule}`,
             );
             break;
           }
@@ -179,14 +126,14 @@ export function getFederatedImportStatementForNode(
                * import { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.imported.name}: ${specifier.local.name} } = await ${moduleSpecifier}`,
+                `const { ${specifier.imported.name}: ${specifier.local.name} } = ${getModule}`,
               );
             } else {
               /**
                * import { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}`,
+                `const { ${specifier.local.name} } = ${getModule}`,
               );
             }
             break;
@@ -205,7 +152,7 @@ export function getFederatedImportStatementForNode(
       /**
        * import('pqr')
        */
-      federatedImportStms.push(moduleSpecifier);
+      federatedImportStms.push(getModule);
       break;
     }
     case 'ExportNamedDeclaration': {
@@ -217,14 +164,14 @@ export function getFederatedImportStatementForNode(
                * export { ABC as XYZ } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
+                `const { ${specifier.local.name} } = ${getModule}; export { ${specifier.local.name} as ${specifier.exported.name} }`,
               );
             } else {
               /**
                * export { ABC } from 'pqr';
                */
               federatedImportStms.push(
-                `const { ${specifier.local.name} } = await ${moduleSpecifier}; export { ${specifier.local.name} }`,
+                `const { ${specifier.local.name} } = ${getModule}; export { ${specifier.local.name} }`,
               );
             }
             break;
@@ -240,7 +187,7 @@ export function getFederatedImportStatementForNode(
       break;
     }
   }
-  const federatedImportStmsStr = federatedImportStms.join(';');
+  const federatedImportStmsStr = federatedImportStms.join(';\n');
   return federatedImportStmsStr;
 }
 
@@ -255,9 +202,11 @@ export default function federation(
 
   const remotes = getRemotesConfig(federationConfig.remotes || {});
 
-  const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
-
   const remoteType = federationConfig?.remoteType ?? 'module';
+
+  const initConfig = getInitConfig(name, shared, remotes, remoteType);
+
+  const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
@@ -267,11 +216,6 @@ export default function federation(
    * Created a mapping between resolvedId.id of the module to the module name (shared, exposed)
    */
   const federatedModuleInfo: Record<string, FederatedModuleInfo> = {};
-  /**
-   * Module Map cache
-   */
-  let moduleMap: ModuleMap = {};
-
   /**
    * Get the version of module.
    * Module version if not specified in the federation config needs to be taken from the package.json
@@ -295,7 +239,7 @@ export default function federation(
     /**
      * If its a remote module, then there's no notion of versions.
      */
-    if (type === FederatedModuleType.REMOTE) {
+    if (type === 'remote') {
       return versionInfo;
     }
     const nearestPkgJson = getNearestPackageJson(resolvedModulePath);
@@ -315,58 +259,6 @@ export default function federation(
   };
 
   /**
-   * Get the resolved version for the module.
-   * @param {string} moduleNameOrPath The module name for which a version required.
-   * @returns
-   */
-  const getVersionForModule = (moduleNameOrPath: string) =>
-    (
-      Object.values(federatedModuleInfo).find(
-        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-      ) as SharedOrExposedModuleInfo
-    ).versionInfo.version ?? null;
-
-  /**
-   * Get the module map
-   */
-  const getModuleMap: () => ModuleMap = () =>
-    Object.values(federatedModuleInfo).reduce(
-      (currentModuleMap, moduleInfo) => {
-        const { name: moduleName, moduleNameOrPath, type } = moduleInfo;
-        if (type === FederatedModuleType.REMOTE) {
-          const { remoteType } = moduleInfo as RemoteModuleInfo;
-          return {
-            ...currentModuleMap,
-            [moduleName]: {
-              name: moduleName,
-              moduleNameOrPath,
-              type,
-              remoteType,
-            },
-          };
-        }
-        const { chunkPath, versionInfo } =
-          moduleInfo as SharedOrExposedModuleInfo;
-        const { version, requiredVersion, singleton, strictVersion } =
-          versionInfo;
-        return {
-          ...currentModuleMap,
-          [chunkPath]: {
-            name: moduleName,
-            moduleNameOrPath,
-            chunkPath,
-            type,
-            version,
-            requiredVersion,
-            singleton,
-            strictVersion,
-          },
-        };
-      },
-      {},
-    );
-
-  /**
    * Checks whether the import is from a remote module or not.
    * @param importSource The source from which we are importing.
    */
@@ -378,6 +270,18 @@ export default function federation(
     }
     return false;
   };
+
+  /**
+   * Get the resolved version for the module.
+   * @param {string} moduleNameOrPath The module name for which a version required.
+   * @returns
+   */
+  const getVersionForModule = (moduleNameOrPath: string) =>
+    (
+      Object.values(federatedModuleInfo).find(
+        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+      ) as SharedOrExposedModuleInfo
+    ).versionInfo.version ?? null;
 
   return {
     name: 'rollup-plugin-federation',
@@ -400,7 +304,7 @@ export default function federation(
             moduleNameOrPath: sharedModuleHints?.import
               ? sharedModuleHints.import
               : sharedModuleName,
-            type: FederatedModuleType.SHARED,
+            type: 'shared',
           }),
         ),
       );
@@ -415,7 +319,7 @@ export default function federation(
              * TODO: We don't current support that import be an array. What does that even mean ? Need further clarification.
              */
             moduleNameOrPath: exposedModulePath.import as string,
-            type: FederatedModuleType.EXPOSED,
+            type: 'exposed',
           }),
         ),
       );
@@ -427,7 +331,7 @@ export default function federation(
           ([remoteName, remoteEntity]): FederatedModule => ({
             name: remoteName,
             moduleNameOrPath: remoteEntity.external as string,
-            type: FederatedModuleType.REMOTE,
+            type: 'remote',
           }),
         ),
       );
@@ -440,7 +344,7 @@ export default function federation(
         /**
          * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
          */
-        if (type === FederatedModuleType.REMOTE) {
+        if (type === 'remote') {
           federatedModuleInfo[moduleName] = {
             name: moduleName,
             moduleNameOrPath,
@@ -487,20 +391,6 @@ export default function federation(
         }
       }
       /**
-       * Save the current state of the the module map.
-       */
-      moduleMap = getModuleMap();
-      /**
-       * Emit a file corresponding to the implementation of the __federatedImport__()
-       */
-      this.emitFile({
-        type: 'chunk',
-        id: FEDERATED_IMPORT_MODULE_ID,
-        name: FEDERATED_IMPORT_NAME,
-        fileName: FEDERATED_IMPORT_FILE_NAME,
-        importer: undefined,
-      });
-      /**
        * Emit a file corresponding to the remote container.
        * This plugin will itself resolve this file in resolveId() and provide the implementation of the file in load()
        */
@@ -519,9 +409,6 @@ export default function federation(
        */
       if (source === REMOTE_ENTRY_MODULE_ID) {
         return REMOTE_ENTRY_MODULE_ID;
-      }
-      if (source === FEDERATED_IMPORT_MODULE_ID) {
-        return FEDERATED_IMPORT_MODULE_ID;
       }
       /**
        * Check all the remote modules.
@@ -549,58 +436,60 @@ export default function federation(
          * get(): Resolve the module which is requested.
          */
         const remoteEntryCode = `
-          /**
-           * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
-           */
-          import { setSharedScope } from '${FEDERATED_IMPORT_MODULE_ID}';
-          ${Object.entries(shared)
-            .filter(([, sharedModule]) => sharedModule.eager ?? false)
-            .map(([key, sharedModule]) => {
-              const importedModule = sharedModule.import ?? key;
+          import { init as initModuleFederationRuntime } from '@module-federation/runtime';
+          ${Object.entries(initConfig?.shared ?? {})
+            .filter(
+              ([_, sharedConfigForPkg]) =>
+                sharedConfigForPkg.shareConfig?.eager,
+            )
+            .map(([moduleNameOrPath]) => {
               /**
                * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
                */
-              return `import * as ${FEDERATED_EAGER_SHARED}${importedModule} from '${importedModule}';`;
+              return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
             })
             .join('')}
-          function register(sharedScope, moduleNameOrPath, version, fallback) {
-            if (!Object.prototype.hasOwnProperty.call(sharedScope, moduleNameOrPath)) {
-                sharedScope[moduleNameOrPath] = {};
-            }
-            if (!Object.prototype.hasOwnProperty.call(sharedScope[moduleNameOrPath], version)) {
-                sharedScope[moduleNameOrPath][version] = {
-                    get: fallback,
-                    loaded: false,
-                    from: '${name}',
-                }
-            }
-            return sharedScope[moduleNameOrPath][version];
-          }
           const init = (sharedScope) => {
-            setSharedScope(sharedScope);
-            ${Object.entries(shared)
-              .map(([key, sharedModule]) => {
-                const { shareKey } = sharedModule;
-                const importedModule = sharedModule.import ?? key;
-                if (importedModule) {
-                  const versionForSharedModule =
-                    getVersionForModule(importedModule);
-                  if (sharedModule?.eager) {
+            initModuleFederationRuntime({
+              name: '${initConfig.name}',
+              plugins: [],
+              remotes: ${JSON.stringify(initConfig.remotes)},
+              shared: {
+                ${Object.entries(initConfig.shared ?? {})
+                  .map(([moduleNameOrPath, sharedConfigForPkg]) => {
+                    /**
+                     * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
+                     * QUESTION: How does one even support import: false with this ?
+                     * Bug: https://github.com/module-federation/universe/issues/2020
+                     */
+                    if (!shared[moduleNameOrPath]?.import) {
+                      return '';
+                    }
                     return `
-          register(sharedScope, '${
-            shareKey ?? key
-          }', '${versionForSharedModule}', () => Promise.resolve(${FEDERATED_EAGER_SHARED}${importedModule}).then((module) => () => module))
-        `;
-                  }
-                  return `
-          register(sharedScope, '${
-            shareKey ?? key
-          }', '${versionForSharedModule}', () => import('${importedModule}').then((module) => () => module))
-        `;
-                }
-                return '';
-              })
-              .join('')}
+                      '${moduleNameOrPath}': {
+                        ${JSON.stringify(sharedConfigForPkg).replace(
+                          /^\{|\}$/g,
+                          '',
+                        )},
+                        version: '${getVersionForModule(moduleNameOrPath)}',
+                        ${
+                          /**
+                           * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                           */
+                          sharedConfigForPkg.shareConfig?.eager
+                            ? `
+                            get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),
+                          `
+                            : `
+                            get: () => import('${moduleNameOrPath}').then((module) => () => module),
+                          `
+                        }
+                      },
+                  `;
+                  })
+                  .join('')}
+              }
+            });
           };
           const get = (module) => {
             switch(module) {
@@ -617,17 +506,10 @@ export default function federation(
           };
           export { init, get };
         `;
+        /**
+         * TODO: We need human readable good code. Atleast until the terser plugin minifies it :p
+         */
         return remoteEntryCode;
-      }
-      if (id === FEDERATED_IMPORT_MODULE_ID) {
-        const __federatedImport__ = readFileSync(
-          resolve(__dirname, `./${FEDERATED_IMPORT_FILE_NAME}`),
-          'utf8',
-        );
-        return `
-          export const moduleMap = ${JSON.stringify(moduleMap, null, 2)};
-          ${__federatedImport__}
-        `;
       }
       return null;
     },
@@ -643,10 +525,7 @@ export default function federation(
         /**
          * We don't want to rewrite the imports for the remote entry as well as the implementation of the federated import expression
          */
-        if (
-          id === FEDERATED_IMPORT_MODULE_ID ||
-          id === REMOTE_ENTRY_MODULE_ID
-        ) {
+        if (id === REMOTE_ENTRY_MODULE_ID) {
           return null;
         }
         const self = this;
@@ -673,18 +552,23 @@ export default function federation(
               const resolvedModulePath = getModulePathFromResolvedId(
                 resolvedId?.id as string,
               );
+              /**
+               * We treat shared modules differently from remote modules.
+               * We don't need to do anything to exposed modules ?
+               */
               if (
                 Object.prototype.hasOwnProperty.call(
                   federatedModuleInfo,
                   resolvedModulePath,
-                )
+                ) &&
+                federatedModuleInfo[resolvedModulePath].type === 'shared'
               ) {
                 chunkHasFederatedImports = true;
                 const chunkName = (
                   federatedModuleInfo[
                     resolvedModulePath
                   ] as SharedOrExposedModuleInfo
-                ).chunkPath;
+                ).moduleNameOrPath;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
@@ -692,7 +576,7 @@ export default function federation(
                       importStmt: FEDERATED_IMPORT_EXPR,
                       entityToImport: chunkName,
                     },
-                    FederatedModuleType.SHARED,
+                    'shared',
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,
@@ -714,7 +598,7 @@ export default function federation(
                       // @ts-ignore
                       entityToImport: node?.source?.value,
                     },
-                    FederatedModuleType.REMOTE,
+                    'remote',
                   );
                 magicString.overwrite(
                   (node as AcornNode).start,
@@ -726,14 +610,15 @@ export default function federation(
           },
         });
         /**
-         * The top level import of FEDERATED_IMPORT_EXPR
+         * The top level import of loadShare and loadRemote
+         * TODO: Don't import both loadShare and loadRemote just because you are lazy to code it :p. Curious whether rollup's tree-shaking can take care of it automagically.
          */
         if (chunkHasFederatedImports) {
           magicString.prepend(`
             /**
-             * Import from the virtual module FEDERATED_IMPORT_MODULE_ID
+             * Import from @module-federation/runtime
              */
-            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '${FEDERATED_IMPORT_MODULE_ID}';${EOL}
+            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '@module-federation/runtime';${EOL}
           `);
         }
         return {
@@ -750,15 +635,16 @@ export default function federation(
        * TODO: If the user has already registered a manualChunks function in their rollup config, we need to honor that.
        */
       const manualChunks: ManualChunksOption = (id) => {
-        /**
-         * This is currently a hack so that rollup doesn't generate shared chunks between the exposed module and the FEDERATED_IMPORT_MODULE_ID.
-         * TODO: Find a better way to force rollup to do this.
-         */
-        if (id === FEDERATED_IMPORT_MODULE_ID) {
-          return FEDERATED_IMPORT_MODULE_ID;
-        }
         if (id === REMOTE_ENTRY_MODULE_ID) {
           return REMOTE_ENTRY_MODULE_ID;
+        }
+        /**
+         * We need to forcefully create a separate chunk for the @module-federation/runtime package
+         * Rollup shouldn't include this with any other modules as those might include top-level awaits calls to loadShare or loadRemote
+         * These calls cannot be present before the container is initialized.
+         */
+        if (id.includes(FEDERATION_RUNTIME_PACKAGE)) {
+          return FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME;
         }
         const resolvedModulePath = getModulePathFromResolvedId(id);
         if (

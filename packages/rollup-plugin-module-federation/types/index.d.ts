@@ -1,7 +1,10 @@
 /**
  * Adapted and modified from: https://github.com/webpack/webpack/blob/main/types.d.ts
  * The following options have been modified/removed:
- * 1. library
+ * 1. library has been removed.
+ * 2. name has been made a required property. Previously it was optional.
+ * 3. In ExposesConfig, import has been made to string. Previously it was string | string[]
+ * 4. In Remoted config, externals has been made to string. Previously it was string | string[]
  */
 export declare interface ModuleFederationPluginOptions {
   /**
@@ -17,7 +20,7 @@ export declare interface ModuleFederationPluginOptions {
   /**
    * The name of the container.
    */
-  name?: string;
+  name: string;
 
   /**
    * The external type of the remote containers.
@@ -75,7 +78,7 @@ export declare interface ExposesConfig {
   /**
    * Request to a module that should be exposed by this container.
    */
-  import: string | string[];
+  import: string;
 
   /**
    * Custom chunk name for the exposed module.
@@ -99,7 +102,7 @@ export declare interface RemotesConfig {
   /**
    * Container locations from which modules should be resolved and loaded at runtime.
    */
-  external: string | string[];
+  external: string;
 
   /**
    * The name of the share scope shared with this remote.
