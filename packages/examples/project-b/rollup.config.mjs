@@ -26,7 +26,7 @@ const config = ({ outputFormat }) => ({
     json(),
     commonjs(),
     prettier({
-      parser: 'babel'
+      parser: 'babel',
     }),
     copy({
       targets: [
@@ -38,7 +38,6 @@ const config = ({ outputFormat }) => ({
     }),
   ],
 });
-
 
 export default [
   config({ outputFormat: 'esm' }),

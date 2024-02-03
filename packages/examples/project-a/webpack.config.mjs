@@ -13,14 +13,16 @@ const config = ({ outputFormat }) => ({
     path: path.resolve(__dirname, `dist/webpack/${outputFormat}`),
     filename: 'index.js',
     library: {
-      type: outputFormat === 'esm' ? 'module': outputFormat,
+      type: outputFormat === 'esm' ? 'module' : outputFormat,
     },
   },
-  ...(outputFormat === 'esm' ? ({
-    experiments: {
-      outputModule: true,
-    },
-  }): {}),
+  ...(outputFormat === 'esm'
+    ? {
+        experiments: {
+          outputModule: true,
+        },
+      }
+    : {}),
   plugins: [
     new ModuleFederationPlugin({
       ...federationconfig('webpack'),
@@ -28,7 +30,7 @@ const config = ({ outputFormat }) => ({
        * Additional stuff for webpack.
        */
       library: {
-        type: outputFormat === 'esm' ? 'module': outputFormat,
+        type: outputFormat === 'esm' ? 'module' : outputFormat,
       },
     }),
     new CopyPlugin({
@@ -37,6 +39,4 @@ const config = ({ outputFormat }) => ({
   ],
 });
 
-export default [
-  config({ outputFormat: 'esm' }),
-];
+export default [config({ outputFormat: 'esm' })];
