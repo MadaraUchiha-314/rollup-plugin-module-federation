@@ -5,7 +5,7 @@ import {
   generateExposeFilename,
   generateShareFilename,
 } from '@module-federation/sdk';
-import type { UserOptions } from '@module-federation/runtime/dist/type.cjs.js';
+import type { UserOptions } from '@module-federation/runtime/dist/types.cjs.js';
 
 import type { PackageJson } from 'type-fest';
 import type { Exposes, Remotes, Shared } from '../types';

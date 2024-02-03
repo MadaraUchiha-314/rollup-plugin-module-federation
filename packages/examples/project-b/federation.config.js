@@ -8,5 +8,4 @@ export const federationconfig = () => ({
     react: {},
     axios: {},
   },
-  remoteType: 'module',
 });
