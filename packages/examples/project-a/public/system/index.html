@@ -1,0 +1,82 @@
+<html>
+  <head>
+    <title>Module Federation Experiments</title>
+    <!-- Load SystemJS -->
+    <script src="https://cdn.jsdelivr.net/npm/systemjs@6.14.3/dist/system.min.js"></script>
+    <script type="module" id="example-code">
+      const sharedScope = {
+        /**
+         * In the base-example, we have declared uuid as import: false
+         * So we provide a fallback by directly registering it with the shared scope object.
+         */
+        uuid: {
+          '9.0.0': {
+            get: () => () => Promise.resolve({ v4: () => ({ mock: 'uuid' }) }),
+            from: 'project-a',
+          },
+        },
+      };
+
+      globalThis.sharedScope = sharedScope;
+
+      const basePath = window.location.href.slice(
+        0,
+        window.location.href.lastIndexOf('/'),
+      );
+      const remoteEntryUrl = `${basePath}/my-remote-entry.js`;
+      /**
+       * Import the remote container using SystemJS as it's output format is system.
+       */
+      const container = await System.import(remoteEntryUrl);
+
+      console.log('doing container.init()');
+      await container.init(sharedScope);
+      console.log('shared scope: ', JSON.stringify(sharedScope, null, 2));
+
+      console.log("doing container.get('./react')");
+      const react = (await container.get('./react'))();
+      console.log('exposed module ./react: ', react);
+      console.log('shared scope: ', JSON.stringify(sharedScope, null, 2));
+
+      console.log("doing container.get('./index')");
+      const index = (await container.get('./index'))();
+      console.log('exposed module ./index', index);
+
+      console.log('calling doSomething() from the exposed module ./index');
+      await index.doSomething();
+
+      console.log("doing container.get('./pqr')");
+      const pqr = (await container.get('./pqr'))();
+      console.log('exposed module ./pqr', pqr);
+    </script>
+    <style>
+      pre {
+        border: solid;
+        text-wrap: wrap;
+      }
+      .container {
+        display: flex;
+      }
+      .inner-container {
+        margin: 10px 10px 10px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Open JS console to see logs.</h3>
+    <h4>
+      Type globalThis.shareScope in the JS console to check the current state of
+      shared scope object.
+    </h4>
+    <div class="container">
+      <div class="inner-container">
+        <h4>Check the page source or code below to see what's happening</h4>
+        <pre id="example-code-preview" />
+      </div>
+    </div>
+  </body>
+  <script>
+    document.getElementById('example-code-preview').innerHTML =
+      document.getElementById('example-code').innerHTML;
+  </script>
+</html>

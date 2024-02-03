@@ -9,12 +9,10 @@ import federation from 'rollup-plugin-module-federation';
 
 import { federationconfig } from './federation.config.js';
 
-const outputDir = 'dist/rollup';
-
-export default {
+const config = ({ outputFormat }) => ({
   output: {
-    dir: outputDir,
-    format: 'es',
+    dir: `dist/rollup/${outputFormat}`,
+    format: outputFormat,
   },
   plugins: [
     replace({
@@ -28,15 +26,20 @@ export default {
     json(),
     commonjs(),
     prettier({
-      parser: 'babel'
+      parser: 'babel',
     }),
     copy({
       targets: [
         {
-          src: './public/index.html',
-          dest: outputDir,
+          src: `./public/${outputFormat}/index.html`,
+          dest: `dist/rollup/${outputFormat}`,
         },
       ],
     }),
   ],
-};
+});
+
+export default [
+  config({ outputFormat: 'esm' }),
+  config({ outputFormat: 'system' }),
+];
