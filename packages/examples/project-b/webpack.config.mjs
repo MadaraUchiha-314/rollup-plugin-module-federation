@@ -39,4 +39,7 @@ const config = ({ outputFormat }) => ({
   ],
 });
 
-export default [config({ outputFormat: 'esm' }), config({ outputFormat: 'system' })];
+export default [
+  config({ outputFormat: 'esm' }),
+  config({ outputFormat: 'system' }),
+];
