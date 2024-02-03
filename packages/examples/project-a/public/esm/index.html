@@ -12,7 +12,8 @@
             /**
              * Return a factory that returns a Promise which returns a factory which returns the module
              */
-            get: () => Promise.resolve(() => ({ v4: () => ({ mock: 'uuid' }) })),
+            get: () =>
+              Promise.resolve(() => ({ v4: () => ({ mock: 'uuid' }) })),
             from: 'project-a',
           },
         },
