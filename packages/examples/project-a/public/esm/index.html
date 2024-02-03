@@ -9,7 +9,13 @@
          */
         uuid: {
           '9.0.0': {
-            get: () => () => Promise.resolve({ v4: () => ({ mock: 'uuid' }) }),
+            /**
+             * Return a factory that returns a Promise which returns a factory which returns the module
+             */
+            get: () =>
+              Promise.resolve(() => ({
+                v4: () => globalThis.crypto.randomUUID(),
+              })),
             from: 'project-a',
           },
         },
