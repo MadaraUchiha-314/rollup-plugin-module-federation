@@ -6,31 +6,37 @@ import path from 'node:path';
 
 const __dirname = path.resolve('.');
 
-export default {
+const config = ({ outputFormat }) => ({
   mode: 'development',
   entry: './src/index.js',
   output: {
-    path: path.resolve(__dirname, 'dist/webpack'),
+    path: path.resolve(__dirname, `dist/webpack/${outputFormat}`),
     filename: 'index.js',
     library: {
-      type: 'module',
+      type: outputFormat === 'esm' ? 'module': outputFormat,
     },
   },
-  experiments: {
-    outputModule: true,
-  },
+  ...(outputFormat === 'esm' ? ({
+    experiments: {
+      outputModule: true,
+    },
+  }): {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...federationconfig,
+      ...federationconfig('webpack'),
       /**
        * Additional stuff for webpack.
        */
       library: {
-        type: 'module',
+        type: outputFormat === 'esm' ? 'module': outputFormat,
       },
     }),
     new CopyPlugin({
-      patterns: [{ from: 'public/index.html' }],
+      patterns: [{ from: `public/${outputFormat}/index.html` }],
     }),
   ],
-};
+});
+
+export default [
+  config({ outputFormat: 'esm' }),
+];

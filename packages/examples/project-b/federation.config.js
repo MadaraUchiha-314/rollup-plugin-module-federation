@@ -1,4 +1,4 @@
-export const federationconfig = {
+export const federationconfig = () => ({
   name: 'sample_project_b',
   filename: 'my-remote-entry.js',
   exposes: {
@@ -8,4 +8,5 @@ export const federationconfig = {
     react: {},
     axios: {},
   },
-};
+  remoteType: 'module',
+});
