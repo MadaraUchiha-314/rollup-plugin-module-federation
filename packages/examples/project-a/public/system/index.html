@@ -12,7 +12,7 @@
         uuid: {
           '9.0.0': {
             get: () =>
-              Promise.resolve(() => ({ v4: () => ({ mock: 'uuid' }) })),
+              Promise.resolve(() => ({ v4: () => globalThis.crypto.randomUUID() })),
             from: 'project-a',
           },
         },
