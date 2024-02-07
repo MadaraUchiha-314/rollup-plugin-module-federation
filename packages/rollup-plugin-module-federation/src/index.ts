@@ -459,7 +459,12 @@ export default function federation(
                   .map(([moduleNameOrPath, sharedConfigForPkg]) => {
                     return `
                       '${moduleNameOrPath}': {
-                        ${JSON.stringify(sharedConfigForPkg).replace(
+                        ${
+                          /**
+                           * We inject the entire object as json and then remote the starting and ending curly braces
+                           * This is to add further keys to the object.
+                           */
+                          JSON.stringify(sharedConfigForPkg).replace(
                           /^\{|\}$/g,
                           '',
                         )},
@@ -471,7 +476,7 @@ export default function federation(
                            * Bug: https://github.com/module-federation/universe/issues/2020
                            */
                           !shared[moduleNameOrPath]?.import ? `
-                            lib: () => { throw Error('${moduleNameOrPath} configured as import: false not found in shared scope.'); },
+                            lib: () => null,
                           `: (
                             /**
                              * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
