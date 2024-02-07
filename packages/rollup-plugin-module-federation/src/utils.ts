@@ -262,9 +262,11 @@ export function getInitConfig(
           /**
            * If its a package for which the user has specified import: false, then we load whatever version is given to us from the shared scope.
            */
-          ...(sharedConfigForPkg.import === false? {
-            strategy: 'loaded-first',
-          }: {}),
+          ...(sharedConfigForPkg.import === false
+            ? {
+                strategy: 'loaded-first',
+              }
+            : {}),
         };
         return {
           ...sharedConfig,

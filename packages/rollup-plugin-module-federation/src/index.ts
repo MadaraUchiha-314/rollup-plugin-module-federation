@@ -465,9 +465,10 @@ export default function federation(
                            * This is to add further keys to the object.
                            */
                           JSON.stringify(sharedConfigForPkg).replace(
-                          /^\{|\}$/g,
-                          '',
-                        )},
+                            /^\{|\}$/g,
+                            '',
+                          )
+                        },
                         version: '${getVersionForModule(moduleNameOrPath)}',
                         ${
                           /**
@@ -475,19 +476,20 @@ export default function federation(
                            * QUESTION: How does one even support import: false with this ?
                            * Bug: https://github.com/module-federation/universe/issues/2020
                            */
-                          !shared[moduleNameOrPath]?.import ? `
+                          !shared[moduleNameOrPath]?.import
+                            ? `
                             lib: () => null,
-                          `: (
-                            /**
+                          `
+                            : /**
                              * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
                              */
-                            sharedConfigForPkg.shareConfig?.eager ? `
+                            sharedConfigForPkg.shareConfig?.eager
+                            ? `
                               get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),
                             `
                             : `
                               get: () => import('${moduleNameOrPath}').then((module) => () => module),
                             `
-                          )
                         }
                       },
                   `;

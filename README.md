@@ -46,4 +46,9 @@ export default {
 ```sh
 npm install
 npm run build --workspaces --if-present
+
+# Run the http server
+npx http-server .
+
+# Goto URL: http://localhost:8080/packages/examples/project-a/dist/rollup/esm/
 ```
