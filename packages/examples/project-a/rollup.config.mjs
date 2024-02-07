@@ -9,7 +9,7 @@ import federation from 'rollup-plugin-module-federation';
 
 import { federationconfig } from './federation.config.js';
 
-const config = ({ outputFormat }) => ({
+const config = async ({ outputFormat }) => ({
   output: {
     dir: `dist/rollup/${outputFormat}`,
     format: outputFormat,
@@ -19,7 +19,7 @@ const config = ({ outputFormat }) => ({
       'process.env.NODE_ENV': JSON.stringify('production'),
       preventAssignment: true,
     }),
-    federation(federationconfig('rollup')),
+    federation((await federationconfig('rollup'))),
     nodeResolve({
       browser: true,
     }),
@@ -39,7 +39,9 @@ const config = ({ outputFormat }) => ({
   ],
 });
 
-export default [
-  config({ outputFormat: 'esm' }),
-  config({ outputFormat: 'system' }),
+const multiBuildConfig = [
+  await config({ outputFormat: 'esm' }),
+  await config({ outputFormat: 'system' }),
 ];
+
+export default multiBuildConfig;

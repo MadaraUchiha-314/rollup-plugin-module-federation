@@ -7,7 +7,7 @@ async function digestMessage(message) {
   return hash;
 }
 
-const getProjectBRemoteEntry = (bundler) => {
+const getProjectBRemoteEntry = async (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
@@ -17,7 +17,7 @@ const getProjectBRemoteEntry = (bundler) => {
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
      */
-    const hash = digestMessage(prefix + branch + projectName).slice(0, 6);
+    const hash = (await digestMessage(prefix + branch + projectName)).slice(0, 6);
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
      */
@@ -37,7 +37,7 @@ const getProjectBRemoteEntry = (bundler) => {
   return url;
 };
 
-export const federationconfig = (bundler) => ({
+export const federationconfig = async (bundler) => ({
   name: 'sample_project_a',
   filename: 'my-remote-entry.js',
   exposes: {
@@ -50,7 +50,7 @@ export const federationconfig = (bundler) => ({
   remoteType: 'module',
   remotes: {
     'project-b': {
-      external: getProjectBRemoteEntry(bundler),
+      external: (await getProjectBRemoteEntry(bundler)),
     },
   },
   shared: {

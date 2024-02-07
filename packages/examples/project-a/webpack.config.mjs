@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const __dirname = path.resolve('.');
 
-const config = ({ outputFormat }) => ({
+const config = async ({ outputFormat }) => ({
   mode: 'development',
   entry: './src/index.js',
   output: {
@@ -25,7 +25,7 @@ const config = ({ outputFormat }) => ({
     : {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...federationconfig('webpack'),
+      ...(await federationconfig('webpack')),
       /**
        * Additional stuff for webpack.
        */
@@ -39,4 +39,9 @@ const config = ({ outputFormat }) => ({
   ],
 });
 
-export default [config({ outputFormat: 'esm' })];
+
+const multiBuildConfig = [
+  await config({ outputFormat: 'esm' }),
+];
+
+export default multiBuildConfig;
