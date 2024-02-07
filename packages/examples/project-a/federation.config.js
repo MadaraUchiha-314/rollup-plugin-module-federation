@@ -1,14 +1,31 @@
+
+// Taken from: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#basic_example
+async function digestMessage(message) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(message);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return hash;
+}
+
 const getProjectBRemoteEntry = (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
+    const branch = process.env.VERCEL_GIT_COMMIT_REF;
+    const scope = process.env.VERCEL_GIT_REPO_SLUG
+    const prefix = 'git-';
     /**
-     * NOTE-0: We are not referencing the PR url. We are always referencing the main branch deploymnt of project-b.
-     * TODO: Point to the PR deployment url.
-     * NOTE-1: We are always pointing to the ESM version of the remote. This is because "@module-federation/runtime" doesn't support other remote tyes.
-     * TODO: Change this when multiple remote types are supported.
+     * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
      */
-    const url = `https://${projectName}.vercel.app/${bundler}/esm/${remoteEntryName}`;
+    const hash = digestMessage(prefix + branch + projectName).slice(0, 6);
+    /**
+     * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
+     */
+    let subDomain = `${projectName}-git-${branch}-${scope}`;
+    if (subDomain.length > 63) {
+      subDomain = `${subDomain.slice(0, 56)}-${hash}`;
+    }
+    const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
   /**
