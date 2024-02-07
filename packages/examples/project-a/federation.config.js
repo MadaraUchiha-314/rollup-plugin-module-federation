@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 
 // Taken from: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#basic_example
 async function digestMessage(message) {
