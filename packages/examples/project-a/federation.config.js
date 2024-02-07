@@ -4,9 +4,8 @@ import crypto from 'node:crypto';
 async function digestMessage(message) {
   const encoder = new TextEncoder();
   const data = encoder.encode(message);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  const decoder = new TextDecoder('utf-8');
-  return decoder.decode(hash);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return String.fromCharCode(hash);
 }
 
 const getProjectBRemoteEntry = async (bundler) => {
