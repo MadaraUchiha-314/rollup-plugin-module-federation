@@ -478,7 +478,7 @@ export default function federation(
                            */
                           !shared[moduleNameOrPath]?.import
                             ? `
-                            lib: () => null,
+                            get: () => Promise.resolve().then(() => () => null),
                           `
                             : /**
                              * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
