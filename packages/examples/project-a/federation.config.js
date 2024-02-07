@@ -5,7 +5,7 @@ async function digestMessage(message) {
   const encoder = new TextEncoder();
   const data = encoder.encode(message);
   const hash = await crypto.subtle.digest("SHA-256", data);
-  const decoder = new TextDecoder();
+  const decoder = new TextDecoder('utf-8');
   return decoder.decode(hash);
 }
 
