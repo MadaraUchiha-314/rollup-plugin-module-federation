@@ -13,8 +13,9 @@ const getProjectBRemoteEntry = async (bundler) => {
     const hash = sha256(prefix + branch + projectName).slice(0, 6);
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
+     * Because the documentation provided is not matching with what we see deployed we have hard-coded certain things. Will iterate as we go along.
      */
-    const subDomain = `${projectName.slice(0, 36)}-git-${hash}-${owner}`;
+    const subDomain = `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
     const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
