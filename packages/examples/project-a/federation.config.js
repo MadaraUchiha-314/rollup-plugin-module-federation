@@ -1,12 +1,4 @@
-import crypto from 'node:crypto';
-
-// Taken from: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#basic_example
-async function digestMessage(message) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(message);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return String.fromCharCode(hash);
-}
+import { sha256 } from 'js-sha256';
 
 const getProjectBRemoteEntry = async (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
@@ -18,7 +10,7 @@ const getProjectBRemoteEntry = async (bundler) => {
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
      */
-    const hash = (await digestMessage(prefix + branch + projectName)).slice(0, 6);
+    const hash = sha256(prefix + branch + projectName).slice(0, 6);
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
      */
