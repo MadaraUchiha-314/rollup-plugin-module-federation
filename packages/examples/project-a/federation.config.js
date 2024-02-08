@@ -5,7 +5,7 @@ const getProjectBRemoteEntry = async (bundler) => {
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
     const branch = process.env.VERCEL_GIT_COMMIT_REF;
-    const scope = process.env.VERCEL_GIT_REPO_SLUG
+    const owner = process.env.VERCEL_GIT_REPO_OWNER
     const prefix = 'git-';
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
@@ -14,7 +14,7 @@ const getProjectBRemoteEntry = async (bundler) => {
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
      */
-    const subDomain = `${projectName.slice(0, 36)}-git-${branch}-${scope}`;
+    const subDomain = `${projectName.slice(0, 36)}-git-${hash}-${owner}`;
     const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
