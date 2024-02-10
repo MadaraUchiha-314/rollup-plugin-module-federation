@@ -14,6 +14,8 @@ import type {
   ExposesObject,
   RemotesObject,
   ShareInfo,
+  FederatedModuleInfo,
+  SharedOrExposedModuleInfo,
 } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
@@ -238,10 +240,29 @@ export function getRemotesConfig(remotes: Remotes): RemotesObject {
   }
 }
 
+/**
+ * Get the resolved version for the module.
+ * @param {string} moduleNameOrPath The module name for which a version required.
+ * @returns
+ */
+export function getRequiredVersionForModule(
+  federatedModuleInfo: Record<string, FederatedModuleInfo>,
+  moduleNameOrPath: string,
+) {
+  return (
+    (
+      Object.values(federatedModuleInfo).find(
+        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+      ) as SharedOrExposedModuleInfo
+    ).versionInfo.requiredVersion ?? false
+  );
+}
+
 export function getInitConfig(
   name: string,
   shared: SharedObject,
   remotes: RemotesObject,
+  federatedModuleInfo: Record<string, FederatedModuleInfo>,
   remoteType: string,
 ): UserOptions {
   return {
@@ -252,7 +273,10 @@ export function getInitConfig(
           version: sharedConfigForPkg.version as string,
           shareConfig: {
             singleton: sharedConfigForPkg.singleton,
-            requiredVersion: sharedConfigForPkg?.requiredVersion ?? false,
+            requiredVersion: getRequiredVersionForModule(
+              federatedModuleInfo,
+              sharedConfigForPkg.import ? sharedConfigForPkg.import : pkgName,
+            ),
             eager: sharedConfigForPkg.eager,
           },
           scope: sharedConfigForPkg.shareScope,

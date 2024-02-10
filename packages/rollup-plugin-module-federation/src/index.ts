@@ -204,8 +204,6 @@ export default function federation(
 
   const remoteType = federationConfig?.remoteType ?? 'module';
 
-  const initConfig = getInitConfig(name, shared, remotes, remoteType);
-
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
   const projectRoot = resolve();
@@ -429,6 +427,13 @@ export default function federation(
        * Provide the code for the remote entry.
        */
       if (id === REMOTE_ENTRY_MODULE_ID) {
+        const initConfig = getInitConfig(
+          name,
+          shared,
+          remotes,
+          federatedModuleInfo,
+          remoteType,
+        );
         /**
          * The basic idea is to provide two functions init() and get() which are compliant with the module federation spec.
          * We create this remote entry manually.
