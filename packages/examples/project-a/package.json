@@ -29,6 +29,7 @@
     "rollup-plugin-copy": "3.5.0",
     "copy-webpack-plugin": "11.0.0",
     "@rollup/plugin-json": "6.0.1",
-    "rollup-plugin-prettier": "4.1.1"
+    "rollup-plugin-prettier": "4.1.1",
+    "js-sha256": "0.11.0"
   }
 }

@@ -259,6 +259,14 @@ export function getInitConfig(
           // We just add a fake function that won't be used so that typescript is satisfied.
           // We either need lib() or get() and we can't provide get()
           lib: () => null,
+          /**
+           * If its a package for which the user has specified import: false, then we load whatever version is given to us from the shared scope.
+           */
+          ...(sharedConfigForPkg.import === false
+            ? {
+                strategy: 'loaded-first',
+              }
+            : {}),
         };
         return {
           ...sharedConfig,

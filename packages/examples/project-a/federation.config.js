@@ -1,14 +1,24 @@
-const getProjectBRemoteEntry = (bundler) => {
+import { sha256 } from 'js-sha256';
+
+const getProjectBRemoteEntry = async (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
+    const branch = process.env.VERCEL_GIT_COMMIT_REF;
+    const owner = process.env.VERCEL_GIT_REPO_OWNER
+    const prefix = 'git-';
     /**
-     * NOTE-0: We are not referencing the PR url. We are always referencing the main branch deploymnt of project-b.
-     * TODO: Point to the PR deployment url.
-     * NOTE-1: We are always pointing to the ESM version of the remote. This is because "@module-federation/runtime" doesn't support other remote tyes.
-     * TODO: Change this when multiple remote types are supported.
+     * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
      */
-    const url = `https://${projectName}.vercel.app/${bundler}/esm/${remoteEntryName}`;
+    const hash = sha256(prefix + branch + projectName).slice(0, 6);
+    /**
+     * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
+     * Because the documentation provided is not matching with what we see deployed we have hard-coded certain things. Will iterate as we go along.
+     * If we are building in the main branch, then we will just include the production url.
+     * TODO: Remove all these hacks.
+     */
+    const subDomain = branch === 'main' ? projectName: `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
+    const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
   /**
@@ -20,7 +30,7 @@ const getProjectBRemoteEntry = (bundler) => {
   return url;
 };
 
-export const federationconfig = (bundler) => ({
+export const federationconfig = async (bundler) => ({
   name: 'sample_project_a',
   filename: 'my-remote-entry.js',
   exposes: {
@@ -33,7 +43,7 @@ export const federationconfig = (bundler) => ({
   remoteType: 'module',
   remotes: {
     'project-b': {
-      external: getProjectBRemoteEntry(bundler),
+      external: (await getProjectBRemoteEntry(bundler)),
     },
   },
   shared: {

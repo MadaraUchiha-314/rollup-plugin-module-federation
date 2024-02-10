@@ -457,32 +457,39 @@ export default function federation(
               shared: {
                 ${Object.entries(initConfig.shared ?? {})
                   .map(([moduleNameOrPath, sharedConfigForPkg]) => {
-                    /**
-                     * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
-                     * QUESTION: How does one even support import: false with this ?
-                     * Bug: https://github.com/module-federation/universe/issues/2020
-                     */
-                    if (!shared[moduleNameOrPath]?.import) {
-                      return '';
-                    }
                     return `
                       '${moduleNameOrPath}': {
-                        ${JSON.stringify(sharedConfigForPkg).replace(
-                          /^\{|\}$/g,
-                          '',
-                        )},
+                        ${
+                          /**
+                           * We inject the entire object as json and then remote the starting and ending curly braces
+                           * This is to add further keys to the object.
+                           */
+                          JSON.stringify(sharedConfigForPkg).replace(
+                            /^\{|\}$/g,
+                            '',
+                          )
+                        },
                         version: '${getVersionForModule(moduleNameOrPath)}',
                         ${
                           /**
-                           * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                           * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
+                           * QUESTION: How does one even support import: false with this ?
+                           * Bug: https://github.com/module-federation/universe/issues/2020
                            */
-                          sharedConfigForPkg.shareConfig?.eager
+                          !shared[moduleNameOrPath]?.import
                             ? `
-                            get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),
+                            get: () => Promise.resolve().then(() => () => null),
                           `
+                            : /**
+                             * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                             */
+                            sharedConfigForPkg.shareConfig?.eager
+                            ? `
+                              get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),
+                            `
                             : `
-                            get: () => import('${moduleNameOrPath}').then((module) => () => module),
-                          `
+                              get: () => import('${moduleNameOrPath}').then((module) => () => module),
+                            `
                         }
                       },
                   `;
