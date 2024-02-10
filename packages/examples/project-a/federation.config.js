@@ -1,11 +1,11 @@
-import { sha256 } from 'js-sha256';
+import { sha256 } from 'js-sha256'; // eslint-disable-line import/no-extraneous-dependencies
 
 const getProjectBRemoteEntry = async (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
     const branch = process.env.VERCEL_GIT_COMMIT_REF;
-    const owner = process.env.VERCEL_GIT_REPO_OWNER
+    const owner = process.env.VERCEL_GIT_REPO_OWNER;
     const prefix = 'git-';
     /**
      * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
@@ -17,7 +17,9 @@ const getProjectBRemoteEntry = async (bundler) => {
      * If we are building in the main branch, then we will just include the production url.
      * TODO: Remove all these hacks.
      */
-    const subDomain = branch === 'main' ? projectName: `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
+    const subDomain = branch === 'main'
+      ? projectName
+      : `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
     const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
@@ -43,7 +45,7 @@ export const federationconfig = async (bundler) => ({
   remoteType: 'module',
   remotes: {
     'project-b': {
-      external: (await getProjectBRemoteEntry(bundler)),
+      external: await getProjectBRemoteEntry(bundler),
     },
   },
   shared: {
