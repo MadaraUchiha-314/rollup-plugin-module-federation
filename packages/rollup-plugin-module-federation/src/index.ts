@@ -194,7 +194,7 @@ export function getFederatedImportStatementForNode(
 export default function federation(
   federationConfig: ModuleFederationPluginOptions,
 ): Plugin {
-  const { name, filename } = federationConfig;
+  const { name, filename, shareScope = 'default' } = federationConfig;
 
   const shared = getSharedConfig(federationConfig.shared || {});
 
@@ -454,8 +454,8 @@ export default function federation(
               return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
             })
             .join('')}
-          const init = (sharedScope) => {
-            initModuleFederationRuntime({
+          const init = async (sharedScope) => {
+            const instance = await initModuleFederationRuntime({
               name: '${initConfig.name}',
               plugins: [],
               remotes: ${JSON.stringify(initConfig.remotes)},
@@ -502,6 +502,7 @@ export default function federation(
                   .join('')}
               }
             });
+            instance.initShareScopeMap('${shareScope}', sharedScope);
           };
           const get = (module) => {
             switch(module) {
