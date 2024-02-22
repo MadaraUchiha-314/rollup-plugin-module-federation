@@ -67,6 +67,10 @@ export declare interface ModuleFederationPluginOptions {
    * Modules that should be shared in the share scope. When provided, property names are used to match requested modules in this compilation.
    */
   shared?: (string | SharedObject)[] | SharedObject;
+  /**
+   * Runtime plugin file paths or package name.
+   */
+  runtimePlugins?: string[];
 }
 
 export type Exposes = (string | ExposesObject)[] | ExposesObject;
