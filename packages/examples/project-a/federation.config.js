@@ -56,9 +56,9 @@ export const federationconfig = async (bundler) => ({
     uuid: {},
     redux: {},
   },
-  ...(bundler === 'rollup' ? {
-    runtimePlugins: [
-      './ExampleRuntimePlugin.js',
-    ]
-  }: {})
+  ...(bundler === 'rollup'
+    ? {
+      runtimePlugins: ['./ExampleRuntimePlugin.js'],
+    }
+    : {}),
 });

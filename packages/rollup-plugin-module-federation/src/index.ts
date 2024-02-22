@@ -208,7 +208,7 @@ export default function federation(
 
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
-  const { runtimePlugins } =federationConfig;
+  const { runtimePlugins } = federationConfig;
 
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
@@ -458,16 +458,20 @@ export default function federation(
               return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
             })
             .join('')}
-          ${runtimePlugins?.map((runtimePlugin, idx) => {
-            return `import ${FEDERATION_RUNTIME_PLUGIN}${idx} from '${runtimePlugin}';`
-          }).join('')}
+          ${runtimePlugins
+            ?.map((runtimePlugin, idx) => {
+              return `import ${FEDERATION_RUNTIME_PLUGIN}${idx} from '${runtimePlugin}';`;
+            })
+            .join('')}
           const init = async (sharedScope) => {
             const instance = await initModuleFederationRuntime({
               name: '${initConfig.name}',
               plugins: [
-                ${(runtimePlugins?.map((_, idx) => {
-                  return `${FEDERATION_RUNTIME_PLUGIN}${idx}(),`
-                })?? []).join('')}
+                ${(
+                  runtimePlugins?.map((_, idx) => {
+                    return `${FEDERATION_RUNTIME_PLUGIN}${idx}(),`;
+                  }) ?? []
+                ).join('')}
               ],
               remotes: ${JSON.stringify(initConfig.remotes)},
               shared: {
