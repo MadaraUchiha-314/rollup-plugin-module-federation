@@ -343,9 +343,6 @@ export default function federation(
         moduleNameOrPath,
         type,
       } of federatedModules) {
-        /**
-         * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
-         */
         if (type === 'remote') {
           federatedModuleInfo[moduleName] = {
             name: moduleName,
@@ -358,6 +355,9 @@ export default function federation(
           };
           continue;
         }
+        /**
+         * Rollup might use its own or other registered resolvers (like @rollup/plugin-node-resolve) to resolve this.
+         */
         /* eslint-disable-next-line no-await-in-loop */
         const resolvedId = await this.resolve(moduleNameOrPath);
         const resolvedModulePath = getModulePathFromResolvedId(
@@ -444,25 +444,42 @@ export default function federation(
          * init(): Populate the shared scope object.
          * get(): Resolve the module which is requested.
          */
-        const remoteEntryCode = `
-          import { init as initModuleFederationRuntime } from '@module-federation/runtime';
-          ${Object.entries(initConfig?.shared ?? {})
-            .filter(
-              ([_, sharedConfigForPkg]) =>
-                sharedConfigForPkg.shareConfig?.eager,
-            )
-            .map(([moduleNameOrPath]) => {
-              /**
-               * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
-               */
-              return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
-            })
-            .join('')}
-          ${runtimePlugins
-            ?.map((runtimePlugin, idx) => {
+        const remoteEntryCode = new MagicString('');
+        /**
+         * We use @module-federation/runtime for initializing and managing the container.
+         */
+        remoteEntryCode.append(
+          `import { init as initModuleFederationRuntime } from '@module-federation/runtime';`
+        );
+        /**
+         * Statically import shared modules which are declared as eager
+         */
+        remoteEntryCode.append(
+          Object.entries(initConfig?.shared ?? {})
+          .filter(
+            ([_, sharedConfigForPkg]) =>
+              sharedConfigForPkg.shareConfig?.eager,
+          )
+          .map(([moduleNameOrPath]) => {
+            /**
+             * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
+             */
+            return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
+          }).join('')
+        );
+        /**
+         * Statically import the code for any runtime plugins which are registered.
+         */
+        remoteEntryCode.append(
+          (runtimePlugins ?? []).map((runtimePlugin, idx) => {
               return `import ${FEDERATION_RUNTIME_PLUGIN}${idx} from '${runtimePlugin}';`;
-            })
-            .join('')}
+          }).join('')
+        );
+        /**
+         * Implementing the init method of the container
+         */
+        remoteEntryCode.append(
+          `
           const init = async (sharedScope) => {
             const instance = await initModuleFederationRuntime({
               name: '${initConfig.name}',
@@ -497,47 +514,55 @@ export default function federation(
                            * Bug: https://github.com/module-federation/universe/issues/2020
                            */
                           !shared[moduleNameOrPath]?.import
-                            ? `
-                            get: () => Promise.resolve().then(() => () => null),
-                          `
+                            ? `get: () => Promise.resolve().then(() => () => null),`
                             : /**
                              * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
                              */
                             sharedConfigForPkg.shareConfig?.eager
-                            ? `
-                              get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),
-                            `
-                            : `
-                              get: () => import('${moduleNameOrPath}').then((module) => () => module),
-                            `
+                            ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
+                            : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
                         }
-                      },
-                  `;
+                      },`;
                   })
                   .join('')}
               }
             });
             instance.initShareScopeMap('${shareScope}', sharedScope);
           };
-          const get = (module) => {
-            switch(module) {
-              ${Object.entries(exposes)
-                .map(
-                  ([key, exposedModule]) => `
-                    case '${key}': {
-                      return import('${exposedModule.import}').then((module) => () => module);
-                    }
-                  `,
-                )
-                .join('')}
-            }
-          };
-          export { init, get };
-        `;
+        `);
+        /**
+         * Implementing the get method of the container
+         */
+        remoteEntryCode.append(
+          `
+            const get = (module) => {
+              switch(module) {
+                ${Object.entries(exposes)
+                  .map(
+                    ([key, exposedModule]) => `
+                      case '${key}': {
+                        return import('${exposedModule.import}').then((module) => () => module);
+                      }`,
+                  )
+                  .join('')}
+                default:
+                  throw new Error(\`Trying to get an exposed module: \$\{module\}\`);
+              }
+            };
+        `
+        );
+        /**
+         * Exporting get and init.
+         */
+        remoteEntryCode.append(
+          `
+            export { init, get };
+          `
+        );
         /**
          * TODO: We need human readable good code. Atleast until the terser plugin minifies it :p
          */
-        return remoteEntryCode;
+        return remoteEntryCode.toString();
       }
       return null;
     },
