@@ -5,33 +5,60 @@
     <script src="https://cdn.jsdelivr.net/npm/systemjs@6.14.3/dist/system.min.js"></script>
     <script type="module" id="example-code">
       const sharedScope = {};
-
       globalThis.sharedScope = sharedScope;
-
       const basePath = window.location.href.slice(
         0,
         window.location.href.lastIndexOf('/'),
       );
       const remoteEntryUrl = `${basePath}/my-remote-entry.js`;
-      const container = await System.import(remoteEntryUrl);
 
-      console.log('doing container.init()');
-      await container.init(sharedScope);
-      console.log('shared scope: ', JSON.stringify(sharedScope, null, 2));
-
-      console.log("doing container.get('./button')");
-      const Button = (await container.get('./button'))();
-      console.log('exposed module ./button: ', Button);
-
-      console.log(Button.someThingElse());
+      let container = null;
+      document
+        .getElementById('load-remote-b')
+        .addEventListener('click', async () => {
+          container = await System.import(remoteEntryUrl);
+          console.log('Loaded remote entry for project-a: ', container);
+        });
+      document
+        .getElementById('init-remote-b')
+        .addEventListener('click', async () => {
+          console.log('doing container.init()');
+          await container.init(sharedScope);
+          console.log('shared scope: ', __FEDERATION__.__SHARE__);
+        });
+      let Button = null;
+      document
+        .getElementById('load-exposed-button')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./button')");
+          Button = (await container.get('./button'))();
+          console.log('exposed module ./button: ', Button);
+        });
+      document
+        .getElementById('execute-someThingElse-button')
+        .addEventListener('click', async () => {
+          console.log(Button.someThingElse());
+        });
     </script>
+    <style>
+      .container {
+        display: flex;
+      }
+    </style>
   </head>
   <body>
-    <h3>View page source to see what's happening</h3>
     <h3>Open JS console to see logs.</h3>
     <h4>
-      Type globalThis.shareScope in the JS console to check the current state of
-      shared scope object.
+      Type __FEDERATION__.__SHARE__ in the JS console to check the current state
+      of shared scope object.
     </h4>
+    <div class="container">
+      <button id="load-remote-b">Load remote entry: project-b</button>
+      <button id="init-remote-b">Init remote entry: project-b</button>
+      <button id="load-exposed-button">Load exposed module ./button</button>
+      <button id="execute-someThingElse-button">
+        Execute someThingElse() from ./button
+      </button>
+    </div>
   </body>
 </html>

@@ -2,82 +2,78 @@
   <head>
     <title>Module Federation Experiments</title>
     <script type="module" id="example-code">
-      const sharedScope = {
-        /**
-         * In the base-example, we have declared uuid as import: false
-         * So we provide a fallback by directly registering it with the shared scope object.
-         */
-        uuid: {
-          '9.0.0': {
-            /**
-             * Return a factory that returns a Promise which returns a factory which returns the module
-             */
-            get: () =>
-              Promise.resolve(() => ({
-                v4: () => globalThis.crypto.randomUUID(),
-              })),
-            from: 'project-a',
-          },
-        },
-      };
-
+      const sharedScope = {};
       globalThis.sharedScope = sharedScope;
-
       const basePath = window.location.href.slice(
         0,
         window.location.href.lastIndexOf('/'),
       );
       const remoteEntryUrl = `${basePath}/my-remote-entry.js`;
-      const container = await import(remoteEntryUrl);
 
-      console.log('doing container.init()');
-      await container.init(sharedScope);
-      console.log('shared scope: ', JSON.stringify(sharedScope, null, 2));
-
-      console.log("doing container.get('./react')");
-      const react = (await container.get('./react'))();
-      console.log('exposed module ./react: ', react);
-      console.log('shared scope: ', JSON.stringify(sharedScope, null, 2));
-
-      console.log("doing container.get('./index')");
-      const index = (await container.get('./index'))();
-      console.log('exposed module ./index', index);
-
-      console.log('calling doSomething() from the exposed module ./index');
-      await index.doSomething();
-
-      console.log("doing container.get('./pqr')");
-      const pqr = (await container.get('./pqr'))();
-      console.log('exposed module ./pqr', pqr);
+      let container = null;
+      document
+        .getElementById('load-remote-a')
+        .addEventListener('click', async () => {
+          container = await import(remoteEntryUrl);
+          console.log('Loaded remote entry for project-a: ', container);
+        });
+      document
+        .getElementById('init-remote-a')
+        .addEventListener('click', async () => {
+          console.log('doing container.init()');
+          await container.init(sharedScope);
+          console.log('shared scope: ', __FEDERATION__.__SHARE__);
+        });
+      document
+        .getElementById('load-exposed-react')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./react')");
+          const react = (await container.get('./react'))();
+          console.log('exposed module ./react: ', react);
+        });
+      let index = null;
+      document
+        .getElementById('load-exposed-index')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./index')");
+          index = (await container.get('./index'))();
+          console.log('exposed module ./index', index);
+        });
+      document
+        .getElementById('execute-doSomething-index')
+        .addEventListener('click', async () => {
+          console.log('calling doSomething() from the exposed module ./index');
+          await index.doSomething();
+        });
+      document
+        .getElementById('load-exposed-pqr')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./pqr')");
+          const pqr = (await container.get('./pqr'))();
+          console.log('exposed module ./pqr', pqr);
+        });
     </script>
     <style>
-      pre {
-        border: solid;
-        text-wrap: wrap;
-      }
       .container {
         display: flex;
-      }
-      .inner-container {
-        margin: 10px 10px 10px 10px;
       }
     </style>
   </head>
   <body>
     <h3>Open JS console to see logs.</h3>
     <h4>
-      Type globalThis.shareScope in the JS console to check the current state of
-      shared scope object.
+      Type __FEDERATION__.__SHARE__ in the JS console to check the current state
+      of shared scope object.
     </h4>
     <div class="container">
-      <div class="inner-container">
-        <h4>Check the page source or code below to see what's happening</h4>
-        <pre id="example-code-preview" />
-      </div>
+      <button id="load-remote-a">Load remote entry: project-a</button>
+      <button id="init-remote-a">Init remote entry: project-a</button>
+      <button id="load-exposed-react">Load exposed module ./react</button>
+      <button id="load-exposed-index">Load exposed module ./index</button>
+      <button id="execute-doSomething-index">
+        Execute doSomething() from ./index
+      </button>
+      <button id="load-exposed-pqr">Load exposed module ./pqr</button>
     </div>
   </body>
-  <script>
-    document.getElementById('example-code-preview').innerHTML =
-      document.getElementById('example-code').innerHTML;
-  </script>
 </html>
