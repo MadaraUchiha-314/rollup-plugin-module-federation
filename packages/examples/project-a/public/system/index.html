@@ -31,42 +31,54 @@
       );
       const remoteEntryUrl = `${basePath}/my-remote-entry.js`;
 
-      let container = null
+      let container = null;
 
-      document.getElementById('load-remote-a').addEventListener('click', async () => {
-        container = await System.import(remoteEntryUrl);
-        console.log('Loaded remote entry for project-a: ', container);
-      });
+      document
+        .getElementById('load-remote-a')
+        .addEventListener('click', async () => {
+          container = await System.import(remoteEntryUrl);
+          console.log('Loaded remote entry for project-a: ', container);
+        });
 
-      document.getElementById('init-remote-a').addEventListener('click', async () => {
-        console.log('doing container.init()');
-        await container.init(sharedScope);
-        console.log('shared scope: ', __FEDERATION__.__SHARE__);
-      });
+      document
+        .getElementById('init-remote-a')
+        .addEventListener('click', async () => {
+          console.log('doing container.init()');
+          await container.init(sharedScope);
+          console.log('shared scope: ', __FEDERATION__.__SHARE__);
+        });
 
-      document.getElementById('load-exposed-react').addEventListener('click', async () => {
-        console.log("doing container.get('./react')");
-        const react = (await container.get('./react'))();
-        console.log('exposed module ./react: ', react);
-      });
+      document
+        .getElementById('load-exposed-react')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./react')");
+          const react = (await container.get('./react'))();
+          console.log('exposed module ./react: ', react);
+        });
 
       let index = null;
-      document.getElementById('load-exposed-index').addEventListener('click', async () => {
-        console.log("doing container.get('./index')");
-        index = (await container.get('./index'))();
-        console.log('exposed module ./index', index);
-      });
+      document
+        .getElementById('load-exposed-index')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./index')");
+          index = (await container.get('./index'))();
+          console.log('exposed module ./index', index);
+        });
 
-      document.getElementById('execute-doSomething-index').addEventListener('click', async () => {
-        console.log('calling doSomething() from the exposed module ./index');
-        await index.doSomething();
-      });
+      document
+        .getElementById('execute-doSomething-index')
+        .addEventListener('click', async () => {
+          console.log('calling doSomething() from the exposed module ./index');
+          await index.doSomething();
+        });
 
-      document.getElementById('load-exposed-pqr').addEventListener('click', async () => {
-        console.log("doing container.get('./pqr')");
-        const pqr = (await container.get('./pqr'))();
-        console.log('exposed module ./pqr', pqr);
-      });
+      document
+        .getElementById('load-exposed-pqr')
+        .addEventListener('click', async () => {
+          console.log("doing container.get('./pqr')");
+          const pqr = (await container.get('./pqr'))();
+          console.log('exposed module ./pqr', pqr);
+        });
     </script>
     <style>
       .container {
@@ -77,15 +89,17 @@
   <body>
     <h3>Open JS console to see logs.</h3>
     <h4>
-      Type __FEDERATION__.__SHARE__ in the JS console to check the current state of
-      shared scope object.
+      Type __FEDERATION__.__SHARE__ in the JS console to check the current state
+      of shared scope object.
     </h4>
     <div class="container">
       <button id="load-remote-a">Load remote entry: project-a</button>
       <button id="init-remote-a">Init remote entry: project-a</button>
       <button id="load-exposed-react">Load exposed module ./react</button>
       <button id="load-exposed-index">Load exposed module ./index</button>
-      <button id="execute-doSomething-index">Execute doSomething() from ./index</button>
+      <button id="execute-doSomething-index">
+        Execute doSomething() from ./index
+      </button>
       <button id="load-exposed-pqr">Load exposed module ./pqr</button>
     </div>
   </body>

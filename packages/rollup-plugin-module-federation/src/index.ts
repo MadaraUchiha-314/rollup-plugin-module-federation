@@ -449,31 +449,34 @@ export default function federation(
          * We use @module-federation/runtime for initializing and managing the container.
          */
         remoteEntryCode.append(
-          `import { init as initModuleFederationRuntime } from '@module-federation/runtime';`
+          `import { init as initModuleFederationRuntime } from '@module-federation/runtime';`,
         );
         /**
          * Statically import shared modules which are declared as eager
          */
         remoteEntryCode.append(
           Object.entries(initConfig?.shared ?? {})
-          .filter(
-            ([_, sharedConfigForPkg]) =>
-              sharedConfigForPkg.shareConfig?.eager,
-          )
-          .map(([moduleNameOrPath]) => {
-            /**
-             * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
-             */
-            return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
-          }).join('')
+            .filter(
+              ([_, sharedConfigForPkg]) =>
+                sharedConfigForPkg.shareConfig?.eager,
+            )
+            .map(([moduleNameOrPath]) => {
+              /**
+               * For shared modules that are eager we use: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import#module_namespace_object
+               */
+              return `import * as ${FEDERATED_EAGER_SHARED}${moduleNameOrPath} from '${moduleNameOrPath}';`;
+            })
+            .join(''),
         );
         /**
          * Statically import the code for any runtime plugins which are registered.
          */
         remoteEntryCode.append(
-          (runtimePlugins ?? []).map((runtimePlugin, idx) => {
+          (runtimePlugins ?? [])
+            .map((runtimePlugin, idx) => {
               return `import ${FEDERATION_RUNTIME_PLUGIN}${idx} from '${runtimePlugin}';`;
-          }).join('')
+            })
+            .join(''),
         );
         /**
          * Implementing the init method of the container
@@ -529,7 +532,8 @@ export default function federation(
             });
             instance.initShareScopeMap('${shareScope}', sharedScope);
           };
-        `);
+        `,
+        );
         /**
          * Implementing the get method of the container
          */
@@ -549,7 +553,7 @@ export default function federation(
                   throw new Error(\`Trying to get an exposed module: \$\{module\}\`);
               }
             };
-        `
+        `,
         );
         /**
          * Exporting get and init.
@@ -557,7 +561,7 @@ export default function federation(
         remoteEntryCode.append(
           `
             export { init, get };
-          `
+          `,
         );
         /**
          * TODO: We need human readable good code. Atleast until the terser plugin minifies it :p
