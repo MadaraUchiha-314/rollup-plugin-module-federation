@@ -2,27 +2,8 @@
   <head>
     <title>Module Federation Experiments</title>
     <script type="module" id="example-code">
-      const sharedScope = {
-        /**
-         * In the base-example, we have declared uuid as import: false
-         * So we provide a fallback by directly registering it with the shared scope object.
-         */
-        uuid: {
-          '9.0.0': {
-            /**
-             * Return a factory that returns a Promise which returns a factory which returns the module
-             */
-            get: () =>
-              Promise.resolve(() => ({
-                v4: () => globalThis.crypto.randomUUID(),
-              })),
-            from: 'project-a',
-          },
-        },
-      };
-
+      const sharedScope = {};
       globalThis.sharedScope = sharedScope;
-
       const basePath = window.location.href.slice(
         0,
         window.location.href.lastIndexOf('/'),
@@ -30,14 +11,12 @@
       const remoteEntryUrl = `${basePath}/my-remote-entry.js`;
 
       let container = null;
-
       document
         .getElementById('load-remote-a')
         .addEventListener('click', async () => {
           container = await import(remoteEntryUrl);
           console.log('Loaded remote entry for project-a: ', container);
         });
-
       document
         .getElementById('init-remote-a')
         .addEventListener('click', async () => {
@@ -45,7 +24,6 @@
           await container.init(sharedScope);
           console.log('shared scope: ', __FEDERATION__.__SHARE__);
         });
-
       document
         .getElementById('load-exposed-react')
         .addEventListener('click', async () => {
@@ -53,7 +31,6 @@
           const react = (await container.get('./react'))();
           console.log('exposed module ./react: ', react);
         });
-
       let index = null;
       document
         .getElementById('load-exposed-index')
@@ -62,14 +39,12 @@
           index = (await container.get('./index'))();
           console.log('exposed module ./index', index);
         });
-
       document
         .getElementById('execute-doSomething-index')
         .addEventListener('click', async () => {
           console.log('calling doSomething() from the exposed module ./index');
           await index.doSomething();
         });
-
       document
         .getElementById('load-exposed-pqr')
         .addEventListener('click', async () => {
