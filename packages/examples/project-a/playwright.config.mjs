@@ -1,6 +1,6 @@
 // @ts-check
 import { defineConfig, devices } from '@playwright/test';
-import { SERVER_PORT, SERVER_URL } from '../../../dev.env';
+import { SERVER_PORT, SERVER_URL } from './dev.env.js';
 
 /**
  * @see https://playwright.dev/docs/test-configuration
