@@ -26,6 +26,7 @@
     "plugin"
   ],
   "scripts": {
+    "start": "npx http-server .",
     "prepare": "husky install",
     "lint": "npx prettier . --write && npx eslint . --fix"
   },
