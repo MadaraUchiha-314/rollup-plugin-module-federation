@@ -17,6 +17,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm install --frozen-lockfile
       - run: npm run build --workspaces --if-present
+      - run: npm run test --workspaces --if-present
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
