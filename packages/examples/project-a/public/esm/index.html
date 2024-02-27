@@ -1,7 +1,7 @@
 <html>
   <head>
     <title>Module Federation Experiments</title>
-    <script type="module" id="example-code">
+    <script type="module" id="example-code" data-testid="example-code">
       const sharedScope = {};
       globalThis.sharedScope = sharedScope;
       const basePath = window.location.href.slice(
@@ -66,14 +66,27 @@
       of shared scope object.
     </h4>
     <div class="container">
-      <button id="load-remote-a">Load remote entry: project-a</button>
-      <button id="init-remote-a">Init remote entry: project-a</button>
-      <button id="load-exposed-react">Load exposed module ./react</button>
-      <button id="load-exposed-index">Load exposed module ./index</button>
-      <button id="execute-doSomething-index">
+      <button id="load-remote-a" data-testid="load-remote-a">
+        Load remote entry: project-a
+      </button>
+      <button id="init-remote-a" data-testid="init-remote-a">
+        Init remote entry: project-a
+      </button>
+      <button id="load-exposed-react" data-testid="load-exposed-react">
+        Load exposed module ./react
+      </button>
+      <button id="load-exposed-index" data-testid="load-exposed-index">
+        Load exposed module ./index
+      </button>
+      <button
+        id="execute-doSomething-index"
+        data-testid="execute-doSomething-index"
+      >
         Execute doSomething() from ./index
       </button>
-      <button id="load-exposed-pqr">Load exposed module ./pqr</button>
+      <button id="load-exposed-pqr" data-testid="load-exposed-pqr">
+        Load exposed module ./pqr
+      </button>
     </div>
   </body>
 </html>

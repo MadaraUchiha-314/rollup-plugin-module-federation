@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "rm -rf dist/ && webpack && rollup --config rollup.config.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npx playwright test",
     "release": ""
   },
   "author": "Rohith R",
@@ -19,17 +19,19 @@
   },
   "devDependencies": {
     "@originjs/vite-plugin-federation": "1.2.3",
+    "@playwright/test": "^1.41.2",
     "@rollup/plugin-commonjs": "25.0.3",
+    "@rollup/plugin-json": "6.0.1",
     "@rollup/plugin-node-resolve": "15.1.0",
     "@rollup/plugin-replace": "5.0.2",
-    "rollup": "3.23.0",
-    "rollup-plugin-module-federation": "*",
-    "webpack": "5.84.1",
-    "webpack-cli": "5.1.1",
-    "rollup-plugin-copy": "3.5.0",
+    "@types/node": "^20.11.20",
     "copy-webpack-plugin": "11.0.0",
-    "@rollup/plugin-json": "6.0.1",
+    "js-sha256": "0.11.0",
+    "rollup": "3.23.0",
+    "rollup-plugin-copy": "3.5.0",
+    "rollup-plugin-module-federation": "*",
     "rollup-plugin-prettier": "4.1.1",
-    "js-sha256": "0.11.0"
+    "webpack": "5.84.1",
+    "webpack-cli": "5.1.1"
   }
 }

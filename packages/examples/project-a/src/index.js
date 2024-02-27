@@ -34,6 +34,8 @@ export async function doSomething() {
     uuidv4,
     ABC,
     PQR,
+    Button,
+    someThingElse,
   };
 }
 
