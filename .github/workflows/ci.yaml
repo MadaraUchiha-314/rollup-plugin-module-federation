@@ -16,8 +16,7 @@ jobs:
           node-version: 18.x
           registry-url: 'https://registry.npmjs.org'
       - run: npm install --frozen-lockfile
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - run: npx playwright install --with-deps
       - run: npm run build --workspaces --if-present
       - run: npm run test --workspaces --if-present
       - name: Release
