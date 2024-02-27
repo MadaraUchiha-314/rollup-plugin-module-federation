@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 18.x
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install --frozen-lockfile
+      - run: npm ci
       - run: npx playwright install --with-deps
       - run: npm run build --workspaces --if-present
       - run: npm run test --workspaces --if-present
@@ -25,3 +25,9 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/rollup-plugin-module-federation && npx semantic-release
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: packages/examples/project-a/playwright-report/
+          retention-days: 30
