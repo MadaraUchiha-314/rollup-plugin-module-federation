@@ -1,6 +1,6 @@
 import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
-import { PACKAGE_JSON } from './constants.js';
+import { PACKAGE_JSON } from './constants';
 import {
   generateExposeFilename,
   generateShareFilename,
