@@ -17,7 +17,7 @@ import {
   getRemotesConfig,
   getInitConfig,
 } from './utils.js';
-import { PACKAGE_JSON } from './constants.js';
+import { PACKAGE_JSON } from './constants';
 
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
 import type { ModuleFederationPluginOptions } from '../types';

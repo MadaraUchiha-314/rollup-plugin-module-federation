@@ -18,7 +18,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps
       - run: npm run build --workspaces --if-present
-      - run: npm run test --workspaces --if-present
+      - run: npm run test:unit --workspaces --if-present
+      - run: npm run test:integration --workspaces --if-present
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
