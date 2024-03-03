@@ -214,7 +214,10 @@ describe('getRemotesConfig', () => {
   });
 
   test('should handle object of objects', () => {
-    const remotes = { remote1: { external: 'remote1' }, remote2: { external: 'remote2' } };
+    const remotes = {
+      remote1: { external: 'remote1' },
+      remote2: { external: 'remote2' },
+    };
     const expected = {
       remote1: { external: 'remote1' },
       remote2: { external: 'remote2' },
@@ -241,14 +244,14 @@ describe('getRemotesConfig', () => {
 describe('getRequiredVersionForModule', () => {
   test('should return the required version for a given module', () => {
     const federatedModuleInfo = {
-      'module1': {
+      module1: {
         moduleNameOrPath: 'module1',
-        versionInfo: { requiredVersion: '1.0.0' }
+        versionInfo: { requiredVersion: '1.0.0' },
       },
-      'module2': {
+      module2: {
         moduleNameOrPath: 'module2',
-        versionInfo: { requiredVersion: '2.0.0' }
-      }
+        versionInfo: { requiredVersion: '2.0.0' },
+      },
     };
 
     const result = getRequiredVersionForModule(federatedModuleInfo, 'module1');
@@ -257,14 +260,14 @@ describe('getRequiredVersionForModule', () => {
 
   test('should return false if the module does not exist', () => {
     const federatedModuleInfo = {
-      'module1': {
+      module1: {
         moduleNameOrPath: 'module1',
-        versionInfo: { requiredVersion: '1.0.0' }
+        versionInfo: { requiredVersion: '1.0.0' },
       },
-      'module2': {
+      module2: {
         moduleNameOrPath: 'module2',
-        versionInfo: { requiredVersion: '2.0.0' }
-      }
+        versionInfo: { requiredVersion: '2.0.0' },
+      },
     };
 
     expect(() => getRequiredVersionForModule(federatedModuleInfo, 'module3')).toThrowError();
@@ -272,14 +275,14 @@ describe('getRequiredVersionForModule', () => {
 
   test('should return false if the required version is not specified', () => {
     const federatedModuleInfo = {
-      'module1': {
+      module1: {
         moduleNameOrPath: 'module1',
-        versionInfo: { requiredVersion: '1.0.0' }
+        versionInfo: { requiredVersion: '1.0.0' },
       },
-      'module2': {
+      module2: {
         moduleNameOrPath: 'module2',
-        versionInfo: {}
-      }
+        versionInfo: {},
+      },
     };
 
     const result = getRequiredVersionForModule(federatedModuleInfo, 'module2');
