@@ -14,6 +14,9 @@ import {
   getFileNameFromChunkName,
   getNearestPackageJson,
   getSharedConfig,
+  getExposesConfig,
+  getRemotesConfig,
+  getRequiredVersionForModule,
 } from '../src/utils.ts';
 
 jest.mock('node:fs');
@@ -116,7 +119,10 @@ describe('getSharedConfig', () => {
   });
 
   test('should handle complex object input', () => {
-    const shared = { module1: { import: 'import1', otherKey: 'otherValue' }, module2: 'import2' };
+    const shared = {
+      module1: { import: 'import1', otherKey: 'otherValue' },
+      module2: 'import2',
+    };
     const expected = {
       module1: { import: 'import1', otherKey: 'otherValue' },
       module2: { import: 'import2' },
@@ -132,5 +138,151 @@ describe('getSharedConfig', () => {
   test('should throw error for invalid object input', () => {
     const shared = { module1: 'import1', module2: 123 };
     expect(() => getSharedConfig(shared)).toThrowError();
+  });
+});
+
+describe('getExposesConfig', () => {
+  test('should handle array input', () => {
+    const input = ['module1', 'module2'];
+    const expected = {
+      module1: { import: 'module1' },
+      module2: { import: 'module2' },
+    };
+    expect(getExposesConfig(input)).toEqual(expected);
+  });
+
+  test('should handle object input', () => {
+    const input = { module1: 'module1', module2: 'module2' };
+    const expected = {
+      module1: { import: 'module1' },
+      module2: { import: 'module2' },
+    };
+    expect(getExposesConfig(input)).toEqual(expected);
+  });
+
+  test('should throw error for invalid array item', () => {
+    const input = ['module1', 123];
+    expect(() => getExposesConfig(input)).toThrowError();
+  });
+
+  test('should throw error for invalid object value', () => {
+    const input = { module1: 'module1', module2: 123 };
+    expect(() => getExposesConfig(input)).toThrowError();
+  });
+
+  test('should handle nested object input', () => {
+    const input = { module1: 'module1', module2: { import: 'module2' } };
+    const expected = {
+      module1: { import: 'module1' },
+      module2: { import: 'module2' },
+    };
+    expect(getExposesConfig(input)).toEqual(expected);
+  });
+
+  test('should throw error for array as object value', () => {
+    const input = { module1: 'module1', module2: ['module2'] };
+    expect(() => getExposesConfig(input)).toThrowError();
+  });
+});
+
+describe('getRemotesConfig', () => {
+  test('should handle array of strings', () => {
+    const remotes = ['remote1', 'remote2'];
+    const expected = {
+      remote1: { external: 'remote1' },
+      remote2: { external: 'remote2' },
+    };
+    expect(getRemotesConfig(remotes)).toEqual(expected);
+  });
+
+  test('should handle array of objects', () => {
+    const remotes = [{ remote1: 'remote1' }, { remote2: 'remote2' }];
+    const expected = {
+      remote1: { external: 'remote1' },
+      remote2: { external: 'remote2' },
+    };
+    expect(getRemotesConfig(remotes)).toEqual(expected);
+  });
+
+  test('should handle object of strings', () => {
+    const remotes = { remote1: 'remote1', remote2: 'remote2' };
+    const expected = {
+      remote1: { external: 'remote1' },
+      remote2: { external: 'remote2' },
+    };
+    expect(getRemotesConfig(remotes)).toEqual(expected);
+  });
+
+  test('should handle object of objects', () => {
+    const remotes = { remote1: { external: 'remote1' }, remote2: { external: 'remote2' } };
+    const expected = {
+      remote1: { external: 'remote1' },
+      remote2: { external: 'remote2' },
+    };
+    expect(getRemotesConfig(remotes)).toEqual(expected);
+  });
+
+  test('should throw error for invalid array item', () => {
+    const remotes = ['remote1', 123];
+    expect(() => getRemotesConfig(remotes)).toThrowError();
+  });
+
+  test('should throw error for invalid object value', () => {
+    const remotes = { remote1: 'remote1', remote2: 123 };
+    expect(() => getRemotesConfig(remotes)).toThrowError();
+  });
+
+  test('should throw error for array as an entrypoint for exposed modules', () => {
+    const remotes = { remote1: 'remote1', remote2: ['remote2'] };
+    expect(() => getRemotesConfig(remotes)).toThrowError();
+  });
+});
+
+describe('getRequiredVersionForModule', () => {
+  test('should return the required version for a given module', () => {
+    const federatedModuleInfo = {
+      'module1': {
+        moduleNameOrPath: 'module1',
+        versionInfo: { requiredVersion: '1.0.0' }
+      },
+      'module2': {
+        moduleNameOrPath: 'module2',
+        versionInfo: { requiredVersion: '2.0.0' }
+      }
+    };
+
+    const result = getRequiredVersionForModule(federatedModuleInfo, 'module1');
+    expect(result).toBe('1.0.0');
+  });
+
+  test('should return false if the module does not exist', () => {
+    const federatedModuleInfo = {
+      'module1': {
+        moduleNameOrPath: 'module1',
+        versionInfo: { requiredVersion: '1.0.0' }
+      },
+      'module2': {
+        moduleNameOrPath: 'module2',
+        versionInfo: { requiredVersion: '2.0.0' }
+      }
+    };
+
+    expect(() => getRequiredVersionForModule(federatedModuleInfo, 'module3')).toThrowError();
+  });
+
+  test('should return false if the required version is not specified', () => {
+    const federatedModuleInfo = {
+      'module1': {
+        moduleNameOrPath: 'module1',
+        versionInfo: { requiredVersion: '1.0.0' }
+      },
+      'module2': {
+        moduleNameOrPath: 'module2',
+        versionInfo: {}
+      }
+    };
+
+    const result = getRequiredVersionForModule(federatedModuleInfo, 'module2');
+    expect(result).toBe(false);
   });
 });
