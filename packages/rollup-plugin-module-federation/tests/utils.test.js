@@ -13,6 +13,7 @@ import {
   getChunkNameForModule,
   getFileNameFromChunkName,
   getNearestPackageJson,
+  getSharedConfig,
 } from '../src/utils.ts';
 
 jest.mock('node:fs');
@@ -92,5 +93,44 @@ describe('getNearestPackageJson', () => {
     const result = getNearestPackageJson('/path/to');
 
     expect(result).toBeNull();
+  });
+});
+
+describe('getSharedConfig', () => {
+  test('should handle array input', () => {
+    const shared = ['module1', 'module2'];
+    const expected = {
+      module1: { import: 'module1' },
+      module2: { import: 'module2' },
+    };
+    expect(getSharedConfig(shared)).toEqual(expected);
+  });
+
+  test('should handle object input', () => {
+    const shared = { module1: 'import1', module2: 'import2' };
+    const expected = {
+      module1: { import: 'import1' },
+      module2: { import: 'import2' },
+    };
+    expect(getSharedConfig(shared)).toEqual(expected);
+  });
+
+  test('should handle complex object input', () => {
+    const shared = { module1: { import: 'import1', otherKey: 'otherValue' }, module2: 'import2' };
+    const expected = {
+      module1: { import: 'import1', otherKey: 'otherValue' },
+      module2: { import: 'import2' },
+    };
+    expect(getSharedConfig(shared)).toEqual(expected);
+  });
+
+  test('should throw error for invalid array input', () => {
+    const shared = ['module1', 123];
+    expect(() => getSharedConfig(shared)).toThrowError();
+  });
+
+  test('should throw error for invalid object input', () => {
+    const shared = { module1: 'import1', module2: 123 };
+    expect(() => getSharedConfig(shared)).toThrowError();
   });
 });
