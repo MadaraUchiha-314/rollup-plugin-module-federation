@@ -20,7 +20,6 @@ import {
   getInitConfig,
 } from '../src/utils.ts';
 
-
 jest.mock('node:fs');
 jest.mock('node:path');
 
@@ -146,7 +145,7 @@ describe('getSharedConfig', () => {
       },
       {
         module2: 'import2',
-      }
+      },
     ];
     const expected = {
       module1: { import: 'import1', otherKey: 'otherValue' },
@@ -188,10 +187,10 @@ describe('getExposesConfig', () => {
   test('should handle array input', () => {
     const input = [
       {
-        module1: 'module1'
+        module1: 'module1',
       },
       {
-        module2: 'module2'
+        module2: 'module2',
       },
     ];
     const expected = {
@@ -334,31 +333,32 @@ describe('getRequiredVersionForModule', () => {
 describe('getInitConfig', () => {
   test('should return the empty configuration when no shared or remote modules are present', () => {
     const name = 'testName';
-    const shared = {
-    };
-    const remotes = {
-    };
-    const federatedModuleInfo = {
-    };
+    const shared = {};
+    const remotes = {};
+    const federatedModuleInfo = {};
 
     const remoteType = 'module';
 
-    const result = getInitConfig(name, shared, remotes, federatedModuleInfo, remoteType);
+    const result = getInitConfig(
+      name,
+      shared,
+      remotes,
+      federatedModuleInfo,
+      remoteType,
+    );
 
     expect(result).toEqual({
       name: 'testName',
-      shared: {
-      },
+      shared: {},
       plugins: [],
-      remotes: [
-      ]
+      remotes: [],
     });
   });
 
   test('should return the correct configuration when remote modules are present', () => {
     const name = 'testName';
     const shared = {
-      'sharedPkg1': {
+      sharedPkg1: {
         import: 'sharedPkg1',
       },
       sharedPkg2: {
@@ -371,23 +371,29 @@ describe('getInitConfig', () => {
       },
     };
     const federatedModuleInfo = {
-      'sharedPkg1': {
+      sharedPkg1: {
         moduleNameOrPath: 'sharedPkg1',
         versionInfo: { requiredVersion: '1.0.0' },
       },
-      'sharedPkg2': {
+      sharedPkg2: {
         moduleNameOrPath: 'sharedPkg2',
         versionInfo: { requiredVersion: '1.0.0' },
       },
     };
     const remoteType = 'module';
 
-    const result = getInitConfig(name, shared, remotes, federatedModuleInfo, remoteType);
+    const result = getInitConfig(
+      name,
+      shared,
+      remotes,
+      federatedModuleInfo,
+      remoteType,
+    );
 
     expect(result).toEqual({
       name: 'testName',
       shared: {
-        'sharedPkg1': {
+        sharedPkg1: {
           version: undefined,
           shareConfig: {
             singleton: undefined,
@@ -397,7 +403,7 @@ describe('getInitConfig', () => {
           scope: undefined,
           lib: expect.any(Function),
         },
-        'sharedPkg2': {
+        sharedPkg2: {
           version: undefined,
           strategy: 'loaded-first',
           shareConfig: {
@@ -416,8 +422,8 @@ describe('getInitConfig', () => {
           entry: 'remote1',
           shareScope: undefined,
           type: 'esm',
-        }
-      ]
+        },
+      ],
     });
   });
 });
