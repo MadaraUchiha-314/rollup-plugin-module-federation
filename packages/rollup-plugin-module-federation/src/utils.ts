@@ -42,7 +42,7 @@ export function getChunkNameForModule({
    * Returning an empty string might cause undefined behavior.
    */
   if (!sanitizedModuleNameOrPath) {
-    throw Error(`Invalid module name provided: ${sanitizeModuleName}`);
+    throw Error(`Invalid module name provided: ${sanitizedModuleNameOrPath}`);
   }
   if (type === 'shared') {
     return generateShareFilename(sanitizedModuleNameOrPath, false);
