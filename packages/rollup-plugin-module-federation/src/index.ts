@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve, dirname, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, sep } from 'node:path';
 import { EOL } from 'node:os';
 
 import { asyncWalk } from 'estree-walker';
@@ -63,9 +62,6 @@ const FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME = '__module_federation_runtime__';
 const FEDERATION_RUNTIME_PLUGIN = '__module_federation_runtime__plugin__';
 
 const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
-
-const __filename: string = fileURLToPath(import.meta.url);
-const __dirname: string = dirname(__filename);
 
 export function getFederatedImportStatementForNode(
   node: NodesToRewrite,

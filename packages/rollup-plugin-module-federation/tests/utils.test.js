@@ -17,6 +17,7 @@ import {
   getExposesConfig,
   getRemotesConfig,
   getRequiredVersionForModule,
+  getInitConfig,
 } from '../src/utils.ts';
 
 jest.mock('node:fs');
@@ -54,6 +55,13 @@ describe('utils.ts', () => {
       sanitizedModuleNameOrPath: 'module',
       type: 'invalid',
     })).toThrowError('Generating chunk name for invalid is not supported');
+  });
+
+  test('getChunkNameForModule throws error for invalid type', () => {
+    expect(() => getChunkNameForModule({
+      sanitizedModuleNameOrPath: null,
+      type: 'invalid',
+    })).toThrowError('Invalid module name provided: null');
   });
 
   test('getFileNameFromChunkName creates file path from chunk name', () => {
@@ -130,6 +138,22 @@ describe('getSharedConfig', () => {
     expect(getSharedConfig(shared)).toEqual(expected);
   });
 
+  test('should handle array input', () => {
+    const shared = [
+      {
+        module1: { import: 'import1', otherKey: 'otherValue' },
+      },
+      {
+        module2: 'import2',
+      },
+    ];
+    const expected = {
+      module1: { import: 'import1', otherKey: 'otherValue' },
+      module2: { import: 'import2' },
+    };
+    expect(getSharedConfig(shared)).toEqual(expected);
+  });
+
   test('should throw error for invalid array input', () => {
     const shared = ['module1', 123];
     expect(() => getSharedConfig(shared)).toThrowError();
@@ -153,6 +177,22 @@ describe('getExposesConfig', () => {
 
   test('should handle object input', () => {
     const input = { module1: 'module1', module2: 'module2' };
+    const expected = {
+      module1: { import: 'module1' },
+      module2: { import: 'module2' },
+    };
+    expect(getExposesConfig(input)).toEqual(expected);
+  });
+
+  test('should handle array input', () => {
+    const input = [
+      {
+        module1: 'module1',
+      },
+      {
+        module2: 'module2',
+      },
+    ];
     const expected = {
       module1: { import: 'module1' },
       module2: { import: 'module2' },
@@ -287,5 +327,103 @@ describe('getRequiredVersionForModule', () => {
 
     const result = getRequiredVersionForModule(federatedModuleInfo, 'module2');
     expect(result).toBe(false);
+  });
+});
+
+describe('getInitConfig', () => {
+  test('should return the empty configuration when no shared or remote modules are present', () => {
+    const name = 'testName';
+    const shared = {};
+    const remotes = {};
+    const federatedModuleInfo = {};
+
+    const remoteType = 'module';
+
+    const result = getInitConfig(
+      name,
+      shared,
+      remotes,
+      federatedModuleInfo,
+      remoteType,
+    );
+
+    expect(result).toEqual({
+      name: 'testName',
+      shared: {},
+      plugins: [],
+      remotes: [],
+    });
+  });
+
+  test('should return the correct configuration when remote modules are present', () => {
+    const name = 'testName';
+    const shared = {
+      sharedPkg1: {
+        import: 'sharedPkg1',
+      },
+      sharedPkg2: {
+        import: false,
+      },
+    };
+    const remotes = {
+      remote1: {
+        external: 'remote1',
+      },
+    };
+    const federatedModuleInfo = {
+      sharedPkg1: {
+        moduleNameOrPath: 'sharedPkg1',
+        versionInfo: { requiredVersion: '1.0.0' },
+      },
+      sharedPkg2: {
+        moduleNameOrPath: 'sharedPkg2',
+        versionInfo: { requiredVersion: '1.0.0' },
+      },
+    };
+    const remoteType = 'module';
+
+    const result = getInitConfig(
+      name,
+      shared,
+      remotes,
+      federatedModuleInfo,
+      remoteType,
+    );
+
+    expect(result).toEqual({
+      name: 'testName',
+      shared: {
+        sharedPkg1: {
+          version: undefined,
+          shareConfig: {
+            singleton: undefined,
+            requiredVersion: '1.0.0',
+            eager: undefined,
+          },
+          scope: undefined,
+          lib: expect.any(Function),
+        },
+        sharedPkg2: {
+          version: undefined,
+          strategy: 'loaded-first',
+          shareConfig: {
+            singleton: undefined,
+            requiredVersion: '1.0.0',
+            eager: undefined,
+          },
+          scope: undefined,
+          lib: expect.any(Function),
+        },
+      },
+      plugins: [],
+      remotes: [
+        {
+          name: 'remote1',
+          entry: 'remote1',
+          shareScope: undefined,
+          type: 'esm',
+        },
+      ],
+    });
   });
 });
