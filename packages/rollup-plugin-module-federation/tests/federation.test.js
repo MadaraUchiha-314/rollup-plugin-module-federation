@@ -15,7 +15,7 @@ describe('getFederatedImportStatementForNode', () => {
       { importStmt, entityToImport },
       'remote',
     );
-    expect(result).toContain('const ABC = (await import(\'entity\')).default');
+    expect(result).toContain("const ABC = (await import('entity')).default");
   });
 
   test('should handle ImportDeclaration with ImportNamespaceSpecifier', () => {
@@ -30,7 +30,7 @@ describe('getFederatedImportStatementForNode', () => {
       { importStmt, entityToImport },
       'remote',
     );
-    expect(result).toContain('const ABC = (await import(\'entity\'))');
+    expect(result).toContain("const ABC = (await import('entity'))");
   });
 
   test('should handle ImportDeclaration with ImportSpecifier', () => {
@@ -49,7 +49,7 @@ describe('getFederatedImportStatementForNode', () => {
       { importStmt, entityToImport },
       'remote',
     );
-    expect(result).toContain('const { XYZ: ABC } = (await import(\'entity\'))');
+    expect(result).toContain("const { XYZ: ABC } = (await import('entity'))");
   });
 
   test('should handle ImportExpression', () => {
@@ -61,7 +61,7 @@ describe('getFederatedImportStatementForNode', () => {
       { importStmt, entityToImport },
       'remote',
     );
-    expect(result).toContain('(await import(\'entity\'))');
+    expect(result).toContain("(await import('entity'))");
   });
 
   test('should handle ExportNamedDeclaration', () => {
@@ -81,7 +81,7 @@ describe('getFederatedImportStatementForNode', () => {
       'remote',
     );
     expect(result).toContain(
-      'const { ABC } = (await import(\'entity\')); export { ABC as XYZ }',
+      "const { ABC } = (await import('entity')); export { ABC as XYZ }",
     );
   });
 });
