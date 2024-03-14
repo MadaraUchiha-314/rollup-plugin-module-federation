@@ -28,7 +28,9 @@ describe('getFederatedImportStatementForNode', () => {
       { importStmt, entityToImport },
       'remote',
     );
-    expect(result).toContain("const ABC = (await loadShared('entity')).default");
+    expect(result).toContain(
+      "const ABC = (await loadShared('entity')).default",
+    );
   });
 
   test('should handle ImportDeclaration with ImportNamespaceSpecifier', () => {
@@ -62,7 +64,9 @@ describe('getFederatedImportStatementForNode', () => {
       { importStmt, entityToImport },
       'shared',
     );
-    expect(result).toContain("const { XYZ: ABC } = (await loadShared('entity'))()");
+    expect(result).toContain(
+      "const { XYZ: ABC } = (await loadShared('entity'))()",
+    );
   });
 
   test('should handle ImportDeclaration with ImportSpecifier', () => {
@@ -143,13 +147,13 @@ describe('getFederatedImportStatementForNode', () => {
       type: 'ImportDeclaration',
       specifiers: [{ type: 'UnsupportedSpecifier' }],
     };
-    expect(() =>
-      getFederatedImportStatementForNode(
-        node,
-        { importStmt, entityToImport },
-        'shared',
-      ),
-    ).toThrow('Unhandled ImportDeclaration specifiers. {"type":"UnsupportedSpecifier"}');
+    expect(() => getFederatedImportStatementForNode(
+      node,
+      { importStmt, entityToImport },
+      'shared',
+    )).toThrow(
+      'Unhandled ImportDeclaration specifiers. {"type":"UnsupportedSpecifier"}',
+    );
   });
 
   test('should throw an error for unsupported export specifier type', () => {
@@ -157,13 +161,13 @@ describe('getFederatedImportStatementForNode', () => {
       type: 'ExportNamedDeclaration',
       specifiers: [{ type: 'UnsupportedSpecifier' }],
     };
-    expect(() =>
-      getFederatedImportStatementForNode(
-        node,
-        { importStmt, entityToImport },
-        'shared',
-      ),
-    ).toThrow('Unhandled ExportNamedDeclaration specifiers. {"type":"UnsupportedSpecifier"}');
+    expect(() => getFederatedImportStatementForNode(
+      node,
+      { importStmt, entityToImport },
+      'shared',
+    )).toThrow(
+      'Unhandled ExportNamedDeclaration specifiers. {"type":"UnsupportedSpecifier"}',
+    );
   });
 
   test('should return empty string for unsupported node type', () => {

@@ -175,9 +175,11 @@ export function getFederatedImportStatementForNode(
             break;
           }
           default: {
-            throw Error(`Unhandled ExportNamedDeclaration specifiers. ${JSON.stringify(
-              specifier,
-            )}`);
+            throw Error(
+              `Unhandled ExportNamedDeclaration specifiers. ${JSON.stringify(
+                specifier,
+              )}`,
+            );
           }
         }
       });
