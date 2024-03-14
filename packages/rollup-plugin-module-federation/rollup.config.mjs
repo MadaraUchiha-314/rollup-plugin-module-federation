@@ -4,13 +4,13 @@ import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
 import json from '@rollup/plugin-json';
 
-export default {
+const config = ({ outputFormat }) => ({
   input: {
     index: 'src/index.ts',
   },
   output: {
-    dir: 'dist',
-    format: 'es',
+    dir: `dist/${outputFormat}`,
+    format: outputFormat,
   },
   plugins: [
     typescript(),
@@ -22,4 +22,9 @@ export default {
     nodeResolve(),
     commonjs(),
   ],
-};
+});
+
+export default [
+  config({ outputFormat: 'esm' }),
+  config({ outputFormat: 'cjs' }),
+];
