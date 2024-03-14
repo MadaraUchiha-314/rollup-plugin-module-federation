@@ -45,7 +45,10 @@
         .addEventListener('click', async () => {
           console.log('doing container.init()');
           await container.init(sharedScope);
-          console.log('shared scope: ', __FEDERATION__.__SHARE__);
+          console.log(
+            'shared scope: ',
+            globalThis?.__FEDERATION__?.__SHARE__ ?? sharedScope,
+          );
         });
 
       document
