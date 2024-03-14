@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-module-federation",
-  "version": "1.10.1",
+  "version": "1.10.2",
   "description": "A rollup plugin for module federation",
   "keywords": [
     "rollup-plugin",
