@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
-  describe, expect, test, jest, afterEach,
-} from '@jest/globals';
+  describe, expect, test, afterEach, vi,
+} from 'vitest';
 import {
   generateExposeFilename,
   generateShareFilename,
@@ -20,8 +20,8 @@ import {
   getInitConfig,
 } from '../src/utils.ts';
 
-jest.mock('node:fs');
-jest.mock('node:path');
+vi.mock('node:fs');
+vi.mock('node:path');
 
 describe('utils.ts', () => {
   test('getModulePathFromResolvedId extracts module path from resolved ID', () => {
@@ -71,7 +71,7 @@ describe('utils.ts', () => {
 
 describe('getNearestPackageJson', () => {
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   test('should return package.json if path is a file', () => {

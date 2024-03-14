@@ -2,15 +2,15 @@
   "name": "project-a",
   "version": "0.0.1",
   "description": "A sample project-a to test rollup-federation",
-  "main": "src/index.js",
+  "license": "MIT",
+  "author": "Rohith R",
   "type": "module",
+  "main": "src/index.js",
   "scripts": {
     "build": "rm -rf dist/ && webpack && rollup --config rollup.config.mjs",
-    "test:integration": "npx playwright test",
-    "release": ""
+    "release": "",
+    "test:integration": "npx playwright test"
   },
-  "author": "Rohith R",
-  "license": "MIT",
   "dependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
