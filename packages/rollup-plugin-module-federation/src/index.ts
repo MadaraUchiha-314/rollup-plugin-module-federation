@@ -175,7 +175,9 @@ export function getFederatedImportStatementForNode(
             break;
           }
           default: {
-            throw Error(`Unsupported specifier.type: ${specifier.type}`);
+            throw Error(`Unhandled ExportNamedDeclaration specifiers. ${JSON.stringify(
+              specifier,
+            )}`);
           }
         }
       });
