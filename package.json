@@ -1,41 +1,41 @@
 {
   "name": "module-federation-plugins",
-  "type": "module",
-  "engines": {
-    "node": ">= 18.0.0"
-  },
-  "workspaces": [
-    "packages/rollup-plugin-module-federation",
-    "packages/examples/project-a",
-    "packages/examples/project-b"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MadaraUchiha-314/rollup-plugin-module-federation.git"
-  },
-  "author": "Rohith R",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/issues"
-  },
-  "homepage": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation#readme",
   "keywords": [
     "rollup-plugin",
     "module-federation",
     "rollup",
     "plugin"
   ],
+  "homepage": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation#readme",
+  "bugs": {
+    "url": "https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MadaraUchiha-314/rollup-plugin-module-federation.git"
+  },
+  "license": "MIT",
+  "author": "Rohith R",
+  "type": "module",
+  "workspaces": [
+    "packages/rollup-plugin-module-federation",
+    "packages/examples/project-a",
+    "packages/examples/project-b"
+  ],
   "scripts": {
-    "start": "npx http-server .",
+    "lint": "npx prettier . --write && npx eslint . --fix",
     "prepare": "husky install",
-    "lint": "npx prettier . --write && npx eslint . --fix"
+    "start": "npx http-server ."
   },
   "devDependencies": {
     "eslint": "8.46.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.28.0",
+    "http-server": "14.1.1",
     "husky": "8.0.3",
-    "prettier": "3.0.0",
-    "http-server": "14.1.1"
+    "prettier": "3.0.0"
+  },
+  "engines": {
+    "node": ">= 18.0.0"
   }
 }
