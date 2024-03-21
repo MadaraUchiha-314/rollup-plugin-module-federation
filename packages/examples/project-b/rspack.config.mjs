@@ -20,6 +20,9 @@ const config = ({ outputFormat }) => ({
   ...(outputFormat === 'esm'
     ? {
         experiments: {
+          rspackFuture: {
+            newTreeshaking: true,
+          },
           outputModule: true,
         },
       }
