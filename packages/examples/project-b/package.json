@@ -7,7 +7,11 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "build": "rm -rf dist/ && webpack && rollup --config rollup.config.mjs",
+    "build:webpack": "webpack",
+    "build:rollup": "rollup --config rollup.config.mjs",
+    "build:rspack": "rspack build",
+    "clean": "rm -rf dist/",
+    "build": "npm run clean && npm run build:webpack && npm run build:rspack && npm run build:rollup",
     "release": ""
   },
   "dependencies": {
@@ -26,6 +30,8 @@
     "rollup-plugin-module-federation": "*",
     "rollup-plugin-prettier": "4.1.1",
     "webpack": "5.84.1",
-    "webpack-cli": "5.1.1"
+    "webpack-cli": "5.1.1",
+    "@rspack/cli": "0.5.8",
+    "@rspack/core": "0.5.8"
   }
 }
