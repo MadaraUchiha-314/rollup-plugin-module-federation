@@ -27,6 +27,12 @@ const config = async ({ outputFormat }) => ({
   plugins: [
     new ModuleFederationPlugin({
       ...(await federationconfig('rspack')),
+      /**
+       * Additional stuff for webpack.
+       */
+      library: {
+        type: outputFormat === 'esm' ? 'module' : outputFormat,
+      },
     }),
     new CopyPlugin({
       patterns: [{ from: `public/${outputFormat}/index.html` }],
@@ -34,6 +40,8 @@ const config = async ({ outputFormat }) => ({
   ],
 });
 
-const multiBuildConfig = [await config({ outputFormat: 'esm' })];
+const multiBuildConfig = [
+  await config({ outputFormat: 'esm' })
+];
 
 export default multiBuildConfig;

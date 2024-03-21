@@ -27,6 +27,12 @@ const config = ({ outputFormat }) => ({
   plugins: [
     new ModuleFederationPlugin({
       ...federationconfig('rspack'),
+      /**
+       * Additional stuff for webpack.
+       */
+      library: {
+        type: outputFormat === 'esm' ? 'module' : outputFormat,
+      },
     }),
     new CopyPlugin({
       patterns: [{ from: `public/${outputFormat}/index.html` }],
