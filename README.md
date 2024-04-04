@@ -48,7 +48,7 @@ npm install
 npm run build --workspaces --if-present
 
 # Run the http server
-npx http-server .
+npm run start
 
 # Goto URL: http://localhost:8080/packages/examples/project-a/dist/rollup/esm/
 ```
