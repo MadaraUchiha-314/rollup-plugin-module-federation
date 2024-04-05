@@ -566,7 +566,10 @@ export default function federation(
         /**
          * TODO: We need human readable good code. Atleast until the terser plugin minifies it :p
          */
-        return remoteEntryCode.toString();
+        return {
+          code: remoteEntryCode.toString(),
+          map: remoteEntryCode.generateMap(),
+        };
       }
       return null;
     },
@@ -680,6 +683,7 @@ export default function federation(
         }
         return {
           code: magicString.toString(),
+          map: magicString.generateMap(),
         };
       },
     },
