@@ -3,7 +3,6 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import copy from 'rollup-plugin-copy';
 import json from '@rollup/plugin-json';
-import prettier from 'rollup-plugin-prettier';
 
 import federation from 'rollup-plugin-module-federation';
 
@@ -26,9 +25,6 @@ const config = ({ outputFormat }) => ({
     }),
     json(),
     commonjs(),
-    // prettier({
-    //   parser: 'babel',
-    // }),
     copy({
       targets: [
         {
