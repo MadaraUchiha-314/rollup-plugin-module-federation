@@ -13,6 +13,7 @@ const config = ({ outputFormat }) => ({
   output: {
     dir: `dist/rollup/${outputFormat}`,
     format: outputFormat,
+    sourcemap: true,
   },
   plugins: [
     replace({
@@ -25,9 +26,9 @@ const config = ({ outputFormat }) => ({
     }),
     json(),
     commonjs(),
-    prettier({
-      parser: 'babel',
-    }),
+    // prettier({
+    //   parser: 'babel',
+    // }),
     copy({
       targets: [
         {
