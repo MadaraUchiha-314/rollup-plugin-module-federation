@@ -1,29 +1,29 @@
-import { defineConfig } from "vite";
-import topLevelAwait from "vite-plugin-top-level-await";
+import { defineConfig } from 'vite'; // eslint-disable-line import/no-extraneous-dependencies
+import topLevelAwait from 'vite-plugin-top-level-await'; // eslint-disable-line import/no-extraneous-dependencies
 
 import { config as rollupConfig } from './rollup.config.mjs';
 
 const config = async ({ outputFormat }) => defineConfig({
   esbuild: {
-    target: "esnext"
+    target: 'esnext',
   },
-  optimizeDeps:{
+  optimizeDeps: {
     esbuildOptions: {
-      target: "esnext",
-    }
+      target: 'esnext',
+    },
   },
   plugins: [
     topLevelAwait({
       // The export name of top-level await promise for each chunk module
-      promiseExportName: "__tla",
+      promiseExportName: '__tla',
       // The function to generate import names of top-level await promise in each chunk module
-      promiseImportName: i => `__tla_${i}`
+      promiseImportName: (i) => `__tla_${i}`,
     }),
   ],
   build: {
     target: 'esnext',
-    rollupOptions: (await rollupConfig({ outputFormat })),
-  }
+    rollupOptions: await rollupConfig({ outputFormat }),
+  },
 });
 
 const viteConfig = await config({ outputFormat: 'esm' });
