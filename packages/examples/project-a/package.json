@@ -10,8 +10,9 @@
     "build:webpack": "webpack",
     "build:rollup": "rollup --config rollup.config.mjs",
     "build:rspack": "rspack build",
+    "build:vite": "vite build --profile",
     "clean": "rm -rf dist/",
-    "build": "npm run clean && npm run build:webpack && npm run build:rspack && npm run build:rollup",
+    "build": "npm run clean && npm run build:vite && npm run build:webpack && npm run build:rspack && npm run build:rollup",
     "release": "",
     "test:integration": "npx playwright test"
   },
@@ -37,6 +38,8 @@
     "webpack": "5.84.1",
     "webpack-cli": "5.1.1",
     "@rspack/cli": "0.5.9",
-    "@rspack/core": "0.5.9"
+    "@rspack/core": "0.5.9",
+    "vite": "5.2.8",
+    "vite-plugin-top-level-await": "1.4.1"
   }
 }
