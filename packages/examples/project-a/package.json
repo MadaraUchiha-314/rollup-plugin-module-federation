@@ -40,6 +40,7 @@
     "@rspack/cli": "0.5.9",
     "@rspack/core": "0.5.9",
     "vite": "5.2.8",
-    "vite-plugin-top-level-await": "1.4.1"
+    "vite-plugin-top-level-await": "1.4.1",
+    "vite-plugin-inspect": "0.8.3"
   }
 }
