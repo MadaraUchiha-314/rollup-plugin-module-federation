@@ -19,7 +19,7 @@ import {
 import { PACKAGE_JSON } from './constants';
 
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
-import type { ModuleFederationPluginOptions } from '../types';
+import { moduleFederationPlugin } from '@module-federation/sdk';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
@@ -31,6 +31,7 @@ import {
   FederatedModuleType,
   ModuleVersionInfo,
 } from './types';
+import { ShareArgs } from '@module-federation/runtime/types';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -194,7 +195,7 @@ export function getFederatedImportStatementForNode(
 }
 
 export default function federation(
-  federationConfig: ModuleFederationPluginOptions,
+  federationConfig: moduleFederationPlugin.ModuleFederationPluginOptions,
 ): Plugin {
   const { name, filename, shareScope = 'default' } = federationConfig;
 
@@ -456,8 +457,11 @@ export default function federation(
          */
         remoteEntryCode.append(
           Object.entries(initConfig?.shared ?? {})
+            .reduce((allSharedConfigs, sharedConfigs) => {
+              return Array.isArray(sharedConfigs) ? [...allSharedConfigs, ...sharedConfigs] : [...allSharedConfigs, sharedConfigs];
+            }, [])
             .filter(
-              ([_, sharedConfigForPkg]) =>
+              (sharedConfigForPkg) =>
                 sharedConfigForPkg.shareConfig?.eager,
             )
             .map(([moduleNameOrPath]) => {
@@ -496,36 +500,39 @@ export default function federation(
               remotes: ${JSON.stringify(initConfig.remotes)},
               shared: {
                 ${Object.entries(initConfig.shared ?? {})
-                  .map(([moduleNameOrPath, sharedConfigForPkg]) => {
-                    return `
-                      '${moduleNameOrPath}': {
-                        ${
-                          /**
-                           * We inject the entire object as json and then remote the starting and ending curly braces
-                           * This is to add further keys to the object.
-                           */
-                          JSON.stringify(sharedConfigForPkg).replace(
-                            /^\{|\}$/g,
-                            '',
-                          )
-                        },
-                        version: '${getVersionForModule(moduleNameOrPath)}',
-                        ${
-                          /**
-                           * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
-                           * QUESTION: How does one even support import: false with this ?
-                           * Bug: https://github.com/module-federation/universe/issues/2020
-                           */
-                          !shared[moduleNameOrPath]?.import
-                            ? `get: () => Promise.resolve().then(() => () => null),`
-                            : /**
-                             * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                  .map(([moduleNameOrPath, sharedConfigs]) => {
+                    return Array.isArray(sharedConfigs) ? sharedConfigs : [sharedConfigs].map((sharedConfigForPkg) => {
+                      return `
+                        '${moduleNameOrPath}': {
+                          ${
+                            /**
+                             * We inject the entire object as json and then remote the starting and ending curly braces
+                             * This is to add further keys to the object.
                              */
-                            sharedConfigForPkg.shareConfig?.eager
-                            ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
-                            : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
-                        }
-                      },`;
+                            JSON.stringify(sharedConfigForPkg).replace(
+                              /^\{|\}$/g,
+                              '',
+                            )
+                          },
+                          version: '${getVersionForModule(moduleNameOrPath)}',
+                          ${
+                            /**
+                             * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
+                             * QUESTION: How does one even support import: false with this ?
+                             * Bug: https://github.com/module-federation/universe/issues/2020
+                             */
+                            !shared[moduleNameOrPath]?.import
+                              ? `get: () => Promise.resolve().then(() => () => null),`
+                              : /**
+                              * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                              */
+                              sharedConfigForPkg.shareConfig?.eager
+                              ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
+                              : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
+                          }
+                        },
+                      `;
+                    }).join('')
                   })
                   .join('')}
               }
