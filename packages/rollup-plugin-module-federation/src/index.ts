@@ -458,11 +458,12 @@ export default function federation(
         remoteEntryCode.append(
           Object.entries(initConfig?.shared ?? {})
             .reduce((allSharedConfigs, sharedConfigs) => {
-              return Array.isArray(sharedConfigs) ? [...allSharedConfigs, ...sharedConfigs] : [...allSharedConfigs, sharedConfigs];
+              return Array.isArray(sharedConfigs)
+                ? [...allSharedConfigs, ...sharedConfigs]
+                : [...allSharedConfigs, sharedConfigs];
             }, [])
             .filter(
-              (sharedConfigForPkg) =>
-                sharedConfigForPkg.shareConfig?.eager,
+              (sharedConfigForPkg) => sharedConfigForPkg.shareConfig?.eager,
             )
             .map(([moduleNameOrPath]) => {
               /**
@@ -501,8 +502,11 @@ export default function federation(
               shared: {
                 ${Object.entries(initConfig.shared ?? {})
                   .map(([moduleNameOrPath, sharedConfigs]) => {
-                    return Array.isArray(sharedConfigs) ? sharedConfigs : [sharedConfigs].map((sharedConfigForPkg) => {
-                      return `
+                    return Array.isArray(sharedConfigs)
+                      ? sharedConfigs
+                      : [sharedConfigs]
+                          .map((sharedConfigForPkg) => {
+                            return `
                         '${moduleNameOrPath}': {
                           ${
                             /**
@@ -524,15 +528,16 @@ export default function federation(
                             !shared[moduleNameOrPath]?.import
                               ? `get: () => Promise.resolve().then(() => () => null),`
                               : /**
-                              * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
-                              */
+                               * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                               */
                               sharedConfigForPkg.shareConfig?.eager
                               ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
                               : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
                           }
                         },
                       `;
-                    }).join('')
+                          })
+                          .join('');
                   })
                   .join('')}
               }

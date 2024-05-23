@@ -4,7 +4,7 @@ import { PACKAGE_JSON, DEFAULT_CONTAINER_NAME } from './constants';
 import {
   generateExposeFilename,
   generateShareFilename,
-  moduleFederationPlugin
+  moduleFederationPlugin,
 } from '@module-federation/sdk';
 
 import type { UserOptions } from '@module-federation/runtime/types';
@@ -70,7 +70,9 @@ export function getNearestPackageJson(path: string): PackageJson | null {
   return getNearestPackageJson(parentDir);
 }
 
-export function getSharedConfig(shared: moduleFederationPlugin.Shared): SharedObject {
+export function getSharedConfig(
+  shared: moduleFederationPlugin.Shared,
+): SharedObject {
   if (Array.isArray(shared)) {
     return shared.reduce<SharedObject>(
       (sharedObject, sharedEntity): SharedObject => {
@@ -128,7 +130,9 @@ export function getSharedConfig(shared: moduleFederationPlugin.Shared): SharedOb
   }
 }
 
-export function getExposesConfig(exposes: moduleFederationPlugin.Exposes): ExposesObject {
+export function getExposesConfig(
+  exposes: moduleFederationPlugin.Exposes,
+): ExposesObject {
   if (Array.isArray(exposes)) {
     return exposes.reduce<ExposesObject>(
       (exposedModules, exposedEntity): ExposesObject => {
@@ -184,7 +188,9 @@ export function getExposesConfig(exposes: moduleFederationPlugin.Exposes): Expos
   }
 }
 
-export function getRemotesConfig(remotes: moduleFederationPlugin.Remotes): RemotesObject {
+export function getRemotesConfig(
+  remotes: moduleFederationPlugin.Remotes,
+): RemotesObject {
   if (Array.isArray(remotes)) {
     return remotes.reduce<RemotesObject>(
       (remoteModules, remoteEntity): RemotesObject => {
@@ -286,7 +292,9 @@ export function getInitConfig(
           /**
            * If its a package for which the user has specified import: false, then we load whatever version is given to us from the shared scope.
            */
-          strategy: sharedConfigForPkg.import ? 'version-first' : 'loaded-first',
+          strategy: sharedConfigForPkg.import
+            ? 'version-first'
+            : 'loaded-first',
         };
         return {
           ...sharedConfig,

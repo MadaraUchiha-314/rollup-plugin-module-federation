@@ -1,6 +1,11 @@
 import { moduleFederationPlugin } from '@module-federation/sdk';
 import type { ShareArgs } from '@module-federation/runtime/types';
-import type { ImportDeclaration, ImportExpression, ExportNamedDeclaration, ExportAllDeclaration } from 'estree';
+import type {
+  ImportDeclaration,
+  ImportExpression,
+  ExportNamedDeclaration,
+  ExportAllDeclaration,
+} from 'estree';
 /**
  * We rewrite the type for SharedObject to be that of the most verbose definition.
  */
