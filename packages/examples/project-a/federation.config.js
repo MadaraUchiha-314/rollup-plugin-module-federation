@@ -56,7 +56,7 @@ export const federationconfig = async (bundler) => ({
     uuid: {},
     redux: {},
   },
-  ...(bundler === 'rollup'
+  ...((bundler === 'rollup' || bundler === 'rspack')
     ? {
       runtimePlugins: ['./ExampleRuntimePlugin.js'],
     }
