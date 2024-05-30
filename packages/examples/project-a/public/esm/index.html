@@ -1,6 +1,13 @@
 <html>
   <head>
     <title>Module Federation Experiments</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "@module-federation/runtime": "https://esm.sh/@module-federation/runtime@0.1.15"
+        }
+      }
+    </script>
     <script type="module" id="example-code" data-testid="example-code">
       const sharedScope = {};
       globalThis.sharedScope = sharedScope;

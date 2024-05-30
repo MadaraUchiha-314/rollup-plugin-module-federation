@@ -9,6 +9,7 @@ import federation from 'rollup-plugin-module-federation';
 import { federationconfig } from './federation.config.js';
 
 const config = async ({ outputFormat }) => ({
+  external: ['@module-federation/runtime'],
   output: {
     dir: `dist/rollup/${outputFormat}`,
     format: outputFormat,
