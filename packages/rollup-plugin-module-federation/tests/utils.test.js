@@ -402,6 +402,7 @@ describe('getInitConfig', () => {
           },
           scope: undefined,
           lib: expect.any(Function),
+          strategy: 'version-first',
         },
         sharedPkg2: {
           version: undefined,
