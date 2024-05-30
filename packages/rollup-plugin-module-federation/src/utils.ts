@@ -305,6 +305,7 @@ export function getInitConfig(
       },
       {},
     ),
+    plugins: [],
     remotes: Object.entries(remotes).map(([remoteName, remoteConfig]) => {
       return {
         name: remoteName,
