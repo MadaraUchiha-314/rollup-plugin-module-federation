@@ -10,6 +10,7 @@ const { CopyRspackPlugin: CopyPlugin } = rspack;
 const config = async ({ outputFormat }) => ({
   mode: 'development',
   entry: './src/index.js',
+  externals: ['@module-federation/runtime'],
   output: {
     path: path.resolve(__dirname, `dist/rspack/${outputFormat}`),
     filename: 'index.js',
