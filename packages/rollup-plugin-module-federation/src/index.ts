@@ -457,19 +457,25 @@ export default function federation(
          */
         remoteEntryCode.append(
           Object.entries(initConfig?.shared ?? {})
-            .reduce<Array<[string, ShareArgs]>>((allSharedConfigs, [moduleNameOrPath, sharedConfigs]) => {
-              if (Array.isArray(sharedConfigs)) {
-                return allSharedConfigs.concat(
-                  sharedConfigs.map((sharedConfigForPkg) => [
-                    moduleNameOrPath,
-                    sharedConfigForPkg,
-                  ]),
-                );
-              }
-              return allSharedConfigs.concat([[moduleNameOrPath, sharedConfigs]]);
-            }, [])
+            .reduce<Array<[string, ShareArgs]>>(
+              (allSharedConfigs, [moduleNameOrPath, sharedConfigs]) => {
+                if (Array.isArray(sharedConfigs)) {
+                  return allSharedConfigs.concat(
+                    sharedConfigs.map((sharedConfigForPkg) => [
+                      moduleNameOrPath,
+                      sharedConfigForPkg,
+                    ]),
+                  );
+                }
+                return allSharedConfigs.concat([
+                  [moduleNameOrPath, sharedConfigs],
+                ]);
+              },
+              [],
+            )
             .filter(
-              ([_, sharedConfigForPkg]) => sharedConfigForPkg.shareConfig?.eager,
+              ([_, sharedConfigForPkg]) =>
+                sharedConfigForPkg.shareConfig?.eager,
             )
             .map(([moduleNameOrPath]) => {
               /**
