@@ -19,7 +19,7 @@ import type {
 } from './types';
 
 export function getModulePathFromResolvedId(id: string): string {
-  return id.split('?')[0];
+  return id?.split('?')?.[0] ?? null;
 }
 
 export function sanitizeModuleName(name: string): string {
