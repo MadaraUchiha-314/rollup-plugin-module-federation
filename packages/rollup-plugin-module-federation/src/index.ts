@@ -5,6 +5,8 @@ import { EOL } from 'node:os';
 import { asyncWalk } from 'estree-walker';
 import MagicString from 'magic-string';
 
+import { generateManifest } from './manifest';
+
 import {
   getModulePathFromResolvedId,
   sanitizeModuleName,
@@ -15,11 +17,11 @@ import {
   getExposesConfig,
   getRemotesConfig,
   getInitConfig,
-} from './utils.js';
+} from './utils';
 import { PACKAGE_JSON } from './constants';
 
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
-import { moduleFederationPlugin } from '@module-federation/sdk';
+import type { moduleFederationPlugin } from '@module-federation/sdk';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
@@ -31,7 +33,7 @@ import {
   FederatedModuleType,
   ModuleVersionInfo,
 } from './types';
-import { ShareArgs } from '@module-federation/runtime/types';
+import type { ShareArgs } from '@module-federation/runtime/types';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -763,5 +765,13 @@ export default function federation(
         chunkFileNames: '[name].js',
       };
     },
+    generateBundle(options, bundle) {
+      const mfManifest = generateManifest(pkgJson, federationConfig, shared, exposes, remotes, bundle);
+      this.emitFile({
+        type: 'asset',
+        fileName: 'mf-manifest.json',
+        source: JSON.stringify(mfManifest, null, 2),
+      });
+    }
   };
 }

@@ -13,7 +13,6 @@ import type {
   SharedObject,
   ExposesObject,
   RemotesObject,
-  ShareInfo,
   FederatedModuleInfo,
   SharedOrExposedModuleInfo,
 } from './types';
