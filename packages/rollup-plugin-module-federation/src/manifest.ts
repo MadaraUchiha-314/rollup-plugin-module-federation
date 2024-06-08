@@ -6,8 +6,8 @@ import { OutputBundle } from 'rollup';
 
 /**
  * Implements the manifest generation logic according to the spec: https://github.com/module-federation/core/issues/2496
- * @param federationConfig 
- * @returns 
+ * @param federationConfig
+ * @returns
  */
 export function generateManifest(
   pkgJson: PackageJson,
@@ -17,7 +17,8 @@ export function generateManifest(
   remotes: RemotesObject,
   bundle: OutputBundle,
 ): Manifest {
-  const INSTANCE_NAME = federationConfig.name ?? (pkgJson.name ?? 'DEFAULT_INSTANCE_NAME');
+  const INSTANCE_NAME =
+    federationConfig.name ?? pkgJson.name ?? 'DEFAULT_INSTANCE_NAME';
   return {
     id: INSTANCE_NAME,
     name: INSTANCE_NAME,
@@ -33,11 +34,11 @@ export function generateManifest(
         path: '',
         type: federationConfig?.library?.type === 'module' ? 'esm' : 'global',
       },
-     types: {
+      types: {
         path: '',
         name: '',
         zip: '',
-        api: ''
+        api: '',
       },
       globalName: INSTANCE_NAME,
       pluginVersion: '',
@@ -59,7 +60,7 @@ export function generateManifest(
           async: [],
           sync: [],
         },
-      }
+      },
     })),
     exposes: Object.entries(exposes).map(([key, value]) => ({
       id: '',
@@ -81,6 +82,6 @@ export function generateManifest(
       moduleName: '',
       alias: '',
       entry: '',
-    }))
-  }
+    })),
+  };
 }

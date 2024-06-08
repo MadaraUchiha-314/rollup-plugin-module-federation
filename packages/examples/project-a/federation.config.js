@@ -35,7 +35,7 @@ const getProjectBRemoteEntry = async (bundler) => {
 export const federationconfig = async (bundler) => ({
   name: 'sample_project_a',
   filename: 'my-remote-entry.js',
-  ...((bundler === 'rollup' || bundler === 'rspack')  ? { manifest: true, } : {}),
+  ...(bundler === 'rollup' || bundler === 'rspack' ? { manifest: true } : {}),
   exposes: {
     './react': 'react',
     './pqr': './src/pqr.js',
@@ -57,7 +57,7 @@ export const federationconfig = async (bundler) => ({
     uuid: {},
     redux: {},
   },
-  ...((bundler === 'rollup' || bundler === 'rspack')
+  ...(bundler === 'rollup' || bundler === 'rspack'
     ? {
       runtimePlugins: ['./ExampleRuntimePlugin.js'],
     }

@@ -766,12 +766,19 @@ export default function federation(
       };
     },
     generateBundle(options, bundle) {
-      const mfManifest = generateManifest(pkgJson, federationConfig, shared, exposes, remotes, bundle);
+      const mfManifest = generateManifest(
+        pkgJson,
+        federationConfig,
+        shared,
+        exposes,
+        remotes,
+        bundle,
+      );
       this.emitFile({
         type: 'asset',
         fileName: 'mf-manifest.json',
         source: JSON.stringify(mfManifest, null, 2),
       });
-    }
+    },
   };
 }
