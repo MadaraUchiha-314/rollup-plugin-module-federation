@@ -52,9 +52,13 @@ export function generateManifest(
     shared: Object.entries(shared).map(([sharedPkgName, sharedPkgConfig]) => ({
       id: `${INSTANCE_NAME}/${sharedPkgConfig.packageName ?? sharedPkgName}`,
       name: sharedPkgConfig.packageName ?? sharedPkgName,
-      version: sharedPkgConfig?.version ? sharedPkgConfig?.version: MODULE_VERSION_UNSPECIFIED,
+      version: sharedPkgConfig?.version
+        ? sharedPkgConfig?.version
+        : MODULE_VERSION_UNSPECIFIED,
       singleton: sharedPkgConfig.singleton ?? false,
-      requiredVersion: sharedPkgConfig.requiredVersion ? sharedPkgConfig.requiredVersion : MODULE_VERSION_UNSPECIFIED,
+      requiredVersion: sharedPkgConfig.requiredVersion
+        ? sharedPkgConfig.requiredVersion
+        : MODULE_VERSION_UNSPECIFIED,
       hash: '',
       assets: {
         js: {

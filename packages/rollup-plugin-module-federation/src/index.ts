@@ -18,7 +18,11 @@ import {
   getRemotesConfig,
   getInitConfig,
 } from './utils';
-import { PACKAGE_JSON, MODULE_VERSION_UNSPECIFIED, REMOTE_ENTRY_NAME } from './constants';
+import {
+  PACKAGE_JSON,
+  MODULE_VERSION_UNSPECIFIED,
+  REMOTE_ENTRY_NAME,
+} from './constants';
 
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
 import type { moduleFederationPlugin } from '@module-federation/sdk';

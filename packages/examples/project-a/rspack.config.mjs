@@ -12,7 +12,7 @@ const config = async ({ outputFormat }) => ({
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, `dist/rspack/${outputFormat}`),
-    publicPath: "http://localhost:8080",
+    publicPath: 'http://localhost:8080',
     filename: 'index.js',
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
