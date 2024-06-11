@@ -18,7 +18,7 @@ import {
   getRemotesConfig,
   getInitConfig,
 } from './utils';
-import { PACKAGE_JSON } from './constants';
+import { PACKAGE_JSON, MODULE_VERSION_UNSPECIFIED, REMOTE_ENTRY_NAME } from './constants';
 
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
 import type { moduleFederationPlugin } from '@module-federation/sdk';
@@ -50,7 +50,6 @@ const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
 
 const REMOTE_ENTRY_MODULE_ID: string = '__remoteEntry__';
 const REMOTE_ENTRY_FILE_NAME: string = `${REMOTE_ENTRY_MODULE_ID}.js`;
-const REMOTE_ENTRY_NAME: string = 'remoteEntry';
 
 /**
  * All imports to shared/exposed/remotes will get converted to this expression.
@@ -63,8 +62,6 @@ const FEDERATION_RUNTIME_PACKAGE = '@module-federation/runtime';
 const FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME = '__module_federation_runtime__';
 
 const FEDERATION_RUNTIME_PLUGIN = '__module_federation_runtime__plugin__';
-
-const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
 export function getFederatedImportStatementForNode(
   node: NodesToRewrite,

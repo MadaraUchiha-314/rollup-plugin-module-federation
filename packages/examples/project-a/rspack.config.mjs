@@ -1,10 +1,10 @@
 import rspack from '@rspack/core';
 import { federationconfig } from './federation.config.js';
 import path from 'node:path';
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 
 const __dirname = path.resolve('.');
 
-const { ModuleFederationPlugin } = rspack.container;
 const { CopyRspackPlugin: CopyPlugin } = rspack;
 
 const config = async ({ outputFormat }) => ({
@@ -12,6 +12,7 @@ const config = async ({ outputFormat }) => ({
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, `dist/rspack/${outputFormat}`),
+    publicPath: "http://localhost:8080",
     filename: 'index.js',
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
@@ -20,9 +21,6 @@ const config = async ({ outputFormat }) => ({
   ...(outputFormat === 'esm'
     ? {
         experiments: {
-          rspackFuture: {
-            newTreeshaking: true,
-          },
           outputModule: true,
         },
       }
@@ -44,5 +42,7 @@ const config = async ({ outputFormat }) => ({
 });
 
 const multiBuildConfig = [await config({ outputFormat: 'esm' })];
+
+console.log(JSON.stringify(multiBuildConfig, null, 2));
 
 export default multiBuildConfig;
