@@ -394,7 +394,7 @@ describe('getInitConfig', () => {
       name: 'testName',
       shared: {
         sharedPkg1: {
-          version: undefined,
+          version: null,
           shareConfig: {
             singleton: undefined,
             requiredVersion: '1.0.0',
@@ -405,7 +405,7 @@ describe('getInitConfig', () => {
           strategy: 'version-first',
         },
         sharedPkg2: {
-          version: undefined,
+          version: null,
           strategy: 'loaded-first',
           shareConfig: {
             singleton: undefined,
