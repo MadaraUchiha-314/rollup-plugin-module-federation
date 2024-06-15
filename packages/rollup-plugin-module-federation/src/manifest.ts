@@ -99,21 +99,23 @@ export function generateManifest(
       },
       [],
     ),
-    exposes: Object.entries(exposes).map(([exposedModuleName, exposedModuleConfig]) => ({
-      id: `${instanceName}:${exposedModuleName.replace('./', '')}`,
-      name: exposedModuleName.replace('./', ''),
-      assets: {
-        js: {
-          async: [],
-          sync: [],
+    exposes: Object.entries(exposes).map(
+      ([exposedModuleName, exposedModuleConfig]) => ({
+        id: `${instanceName}:${exposedModuleName.replace('./', '')}`,
+        name: exposedModuleName.replace('./', ''),
+        assets: {
+          js: {
+            async: [],
+            sync: [],
+          },
+          css: {
+            async: [],
+            sync: [],
+          },
         },
-        css: {
-          async: [],
-          sync: [],
-        },
-      },
-      path: exposedModuleName
-    })),
+        path: exposedModuleName,
+      }),
+    ),
     remotes: Object.entries(remotes).map(([key, value]) => ({
       federationContainerName: '',
       moduleName: '',
