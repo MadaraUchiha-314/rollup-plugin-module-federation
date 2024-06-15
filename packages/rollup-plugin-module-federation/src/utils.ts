@@ -69,6 +69,18 @@ export function getNearestPackageJson(path: string): PackageJson | null {
   return getNearestPackageJson(parentDir);
 }
 
+/**
+ * Get the resolved version for the module.
+ * @param {string} moduleNameOrPath The module name for which a version required.
+ * @returns
+ */
+const getVersionForModule = (federatedModuleInfo: Record<string, FederatedModuleInfo> , moduleNameOrPath: string) =>
+(
+  Object.values(federatedModuleInfo).find(
+    (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+  ) as SharedOrExposedModuleInfo
+).versionInfo.version ?? null;
+
 export function getSharedConfig(
   shared: moduleFederationPlugin.Shared,
 ): SharedObject {
@@ -275,7 +287,7 @@ export function getInitConfig(
     shared: Object.entries(shared).reduce(
       (sharedConfig, [pkgName, sharedConfigForPkg]) => {
         const sharedOptionForPkg = {
-          version: sharedConfigForPkg.version as string,
+          version: sharedConfigForPkg?.version ?? getVersionForModule(federatedModuleInfo, sharedConfigForPkg.import ? sharedConfigForPkg.import : pkgName),
           shareConfig: {
             singleton: sharedConfigForPkg.singleton,
             requiredVersion: getRequiredVersionForModule(

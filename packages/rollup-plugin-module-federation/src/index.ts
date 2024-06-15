@@ -37,7 +37,7 @@ import {
   FederatedModuleType,
   ModuleVersionInfo,
 } from './types';
-import type { ShareArgs } from '@module-federation/runtime/types';
+import type { ShareArgs, UserOptions } from '@module-federation/runtime/types';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -214,6 +214,11 @@ export default function federation(
 
   const { runtimePlugins } = federationConfig;
 
+  /**
+   * This will be set in load hook when we generate the remote entry.
+   */
+  let initConfig: UserOptions;
+
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
     readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'),
@@ -276,18 +281,6 @@ export default function federation(
     }
     return false;
   };
-
-  /**
-   * Get the resolved version for the module.
-   * @param {string} moduleNameOrPath The module name for which a version required.
-   * @returns
-   */
-  const getVersionForModule = (moduleNameOrPath: string) =>
-    (
-      Object.values(federatedModuleInfo).find(
-        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-      ) as SharedOrExposedModuleInfo
-    ).versionInfo.version ?? null;
 
   return {
     name: 'rollup-plugin-federation',
@@ -435,7 +428,7 @@ export default function federation(
        * Provide the code for the remote entry.
        */
       if (id === REMOTE_ENTRY_MODULE_ID) {
-        const initConfig = getInitConfig(
+        initConfig = getInitConfig(
           name,
           shared,
           remotes,
@@ -533,7 +526,6 @@ export default function federation(
                               '',
                             )
                           },
-                          version: '${getVersionForModule(moduleNameOrPath)}',
                           ${
                             /**
                              * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
@@ -770,9 +762,9 @@ export default function federation(
       const mfManifest = generateManifest(
         pkgJson,
         federationConfig,
-        shared,
         exposes,
         remotes,
+        initConfig,
         bundle,
       );
       this.emitFile({
