@@ -99,9 +99,9 @@ export function generateManifest(
       },
       [],
     ),
-    exposes: Object.entries(exposes).map(([key, value]) => ({
-      id: '',
-      name: '',
+    exposes: Object.entries(exposes).map(([exposedModuleName, exposedModuleConfig]) => ({
+      id: `${instanceName}:${exposedModuleName.replace('./', '')}`,
+      name: exposedModuleName.replace('./', ''),
       assets: {
         js: {
           async: [],
@@ -112,7 +112,7 @@ export function generateManifest(
           sync: [],
         },
       },
-      path: '',
+      path: exposedModuleName
     })),
     remotes: Object.entries(remotes).map(([key, value]) => ({
       federationContainerName: '',
