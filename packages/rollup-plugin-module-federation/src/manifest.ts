@@ -3,13 +3,21 @@ import {
   MODULE_VERSION_UNSPECIFIED,
   REMOTE_ENTRY_NAME,
 } from './constants';
-import type { moduleFederationPlugin, Manifest, ManifestShared } from '@module-federation/sdk';
+import type {
+  moduleFederationPlugin,
+  Manifest,
+  ManifestShared,
+} from '@module-federation/sdk';
 import type { PackageJson } from 'type-fest';
 import type { ExposesObject, RemotesObject } from './types';
 import type { OutputBundle } from 'rollup';
 import type { UserOptions, ShareArgs } from '@module-federation/runtime/types';
 
-export function getSharedManifest(instanceName: string, sharedPkgName: string, sharedPkgConfig: ShareArgs): ManifestShared {
+export function getSharedManifest(
+  instanceName: string,
+  sharedPkgName: string,
+  sharedPkgConfig: ShareArgs,
+): ManifestShared {
   return {
     id: `${instanceName}:${sharedPkgName}`,
     name: sharedPkgName,
@@ -74,20 +82,23 @@ export function generateManifest(
       pluginVersion: '',
       publicPath: '',
     },
-    shared: Object.entries(initConfig.shared ?? {}).reduce<ManifestShared[]>((sharedManifest, [sharedPkgName, sharedPkgConfig]) => {
-      if (Array.isArray(sharedPkgConfig)) {
-        return sharedManifest.concat(
-          sharedPkgConfig.map((config) =>
-            getSharedManifest(instanceName, sharedPkgName, config),
-          ),
-        );
-      } else {
-        sharedManifest.push(
-          getSharedManifest(instanceName, sharedPkgName, sharedPkgConfig)
-        );
-      } 
-      return sharedManifest;
-    }, []),
+    shared: Object.entries(initConfig.shared ?? {}).reduce<ManifestShared[]>(
+      (sharedManifest, [sharedPkgName, sharedPkgConfig]) => {
+        if (Array.isArray(sharedPkgConfig)) {
+          return sharedManifest.concat(
+            sharedPkgConfig.map((config) =>
+              getSharedManifest(instanceName, sharedPkgName, config),
+            ),
+          );
+        } else {
+          sharedManifest.push(
+            getSharedManifest(instanceName, sharedPkgName, sharedPkgConfig),
+          );
+        }
+        return sharedManifest;
+      },
+      [],
+    ),
     exposes: Object.entries(exposes).map(([key, value]) => ({
       id: '',
       name: '',
