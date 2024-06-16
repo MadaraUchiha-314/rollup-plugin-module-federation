@@ -37,8 +37,8 @@
     "rollup-plugin-module-federation": "*",
     "webpack": "5.84.1",
     "webpack-cli": "5.1.1",
-    "@rspack/cli": "0.7.0",
-    "@rspack/core": "0.7.0",
-    "@module-federation/enhanced": "0.1.18"
+    "@rspack/cli": "0.7.3",
+    "@rspack/core": "0.7.3",
+    "@module-federation/enhanced": "0.1.19"
   }
 }

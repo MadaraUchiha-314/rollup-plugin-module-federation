@@ -1,15 +1,7 @@
-import React from 'react';
-import axios from 'axios';
+import Button, { someThingElse } from './button.js';
+import Link, { someThingDifferent } from './link.js';
 
-const Button = (text) => ({
-  text,
-});
-
-export const someThingElse = () => ({
-  something: 'nothing',
-  hello: 'world',
-  React,
-  axios,
-});
-
-export default Button;
+export {
+  Button, someThingElse,
+  Link, someThingDifferent,
+};

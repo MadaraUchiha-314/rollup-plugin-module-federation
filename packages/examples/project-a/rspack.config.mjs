@@ -43,6 +43,4 @@ const config = async ({ outputFormat }) => ({
 
 const multiBuildConfig = [await config({ outputFormat: 'esm' })];
 
-console.log(JSON.stringify(multiBuildConfig, null, 2));
-
 export default multiBuildConfig;
