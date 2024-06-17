@@ -384,7 +384,7 @@ export default function federation(
             moduleNameOrPath,
             sanitizedModuleNameOrPath,
             type,
-            chunkPath: getFileNameFromChunkName(chunkName),
+            chunkNameWithExtension: getFileNameFromChunkName(chunkName),
             versionInfo,
           };
         }
@@ -767,6 +767,16 @@ export default function federation(
         initConfig,
         bundle,
       );
+      this.emitFile({
+        type: 'asset',
+        fileName: 'bundle-states.json',
+        source: JSON.stringify(bundle, null, 2),
+      });
+      this.emitFile({
+        type: 'asset',
+        fileName: 'federated-module-info.json',
+        source: JSON.stringify(federatedModuleInfo, null, 2),
+      });
       this.emitFile({
         type: 'asset',
         fileName: 'mf-manifest.json',

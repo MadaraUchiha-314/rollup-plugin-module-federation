@@ -60,7 +60,7 @@ export type RemoteModuleInfo = BaseModuleInfo & {
 };
 
 export type SharedOrExposedModuleInfo = BaseModuleInfo & {
-  chunkPath: string;
+  chunkNameWithExtension: string;
   versionInfo: ModuleVersionInfo;
   type: FederatedModuleType;
 };
@@ -70,7 +70,7 @@ export type FederatedModuleInfo = SharedOrExposedModuleInfo | RemoteModuleInfo;
 export type ModuleMapEntry = {
   name: string;
   moduleNameOrPath: string;
-  chunkPath: string | null;
+  chunkNameWithExtension: string | null;
   type: FederatedModuleType;
   version: string | null;
   requiredVersion: string | null;

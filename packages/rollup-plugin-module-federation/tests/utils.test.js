@@ -65,7 +65,7 @@ describe('utils.ts', () => {
   });
 
   test('getFileNameFromChunkName creates file path from chunk name', () => {
-    expect(getFileNameFromChunkName('chunk-name')).toBe('./chunk-name.js');
+    expect(getFileNameFromChunkName('chunk-name')).toBe('chunk-name.js');
   });
 });
 

@@ -53,7 +53,7 @@ export function getChunkNameForModule({
 }
 
 export function getFileNameFromChunkName(chunkName: string): string {
-  return `.${sep}${chunkName}.js`;
+  return `${chunkName}.js`;
 }
 
 export function getNearestPackageJson(path: string): PackageJson | null {
