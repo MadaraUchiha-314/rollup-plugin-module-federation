@@ -759,14 +759,16 @@ export default function federation(
       };
     },
     generateBundle(options, bundle) {
-      const mfManifest = generateManifest(
+      const mfManifest = generateManifest({
         pkgJson,
         federationConfig,
         exposes,
         remotes,
         initConfig,
+        federatedModuleInfo,
+        remoteEntryFileName,
         bundle,
-      );
+      });
       this.emitFile({
         type: 'asset',
         fileName: 'bundle-states.json',

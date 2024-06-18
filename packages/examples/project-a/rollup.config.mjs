@@ -3,7 +3,7 @@ import { nodeResolve } from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import copy from 'rollup-plugin-copy';
 import json from '@rollup/plugin-json';
-import brotli from 'rollup-plugin-brotli';
+// import brotli from 'rollup-plugin-brotli';
 
 import federation from 'rollup-plugin-module-federation';
 
@@ -26,7 +26,7 @@ const config = async ({ outputFormat }) => ({
     }),
     json(),
     commonjs(),
-    brotli(),
+    // brotli(),
     copy({
       targets: [
         {
