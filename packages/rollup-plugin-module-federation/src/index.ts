@@ -24,6 +24,8 @@ import {
   REMOTE_ENTRY_NAME,
 } from './constants';
 
+import rollupPluginModuleFederationPkgJson from '../package.json';
+
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
 import type { moduleFederationPlugin } from '@module-federation/sdk';
 import type { PackageJson } from 'type-fest';
@@ -778,6 +780,10 @@ export default function federation(
         initConfig,
         federatedModuleInfo,
         remoteEntryFileName,
+        federationRuntimeVersion:
+          rollupPluginModuleFederationPkgJson?.dependencies?.[
+            '@module-federation/runtime'
+          ],
         bundle,
       });
       this.emitFile({

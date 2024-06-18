@@ -109,6 +109,7 @@ export function generateManifest({
   federatedModuleInfo,
   bundle,
   remoteEntryFileName,
+  federationRuntimeVersion,
 }: {
   pkgJson: PackageJson;
   federationConfig: moduleFederationPlugin.ModuleFederationPluginOptions;
@@ -118,6 +119,7 @@ export function generateManifest({
   federatedModuleInfo: Record<string, FederatedModuleInfo>;
   bundle: OutputBundle;
   remoteEntryFileName: string;
+  federationRuntimeVersion: string | undefined;
 }): Manifest {
   const instanceName = initConfig.name ?? pkgJson.name ?? DEFAULT_PKG_NAME;
   return {
@@ -142,7 +144,7 @@ export function generateManifest({
         api: '',
       },
       globalName: instanceName,
-      pluginVersion: '',
+      pluginVersion: federationRuntimeVersion ?? MODULE_VERSION_UNSPECIFIED,
       publicPath: '',
     },
     shared: Object.entries(initConfig.shared ?? {}).reduce<ManifestShared[]>(
