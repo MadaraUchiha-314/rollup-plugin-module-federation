@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /* eslint-disable-next-line import/no-unresolved */
 import Button, { someThingElse } from 'project-b/button';
+/* eslint-disable-next-line import/no-unresolved */
 import Link, { someThingDifferent } from 'project-b/link';
 
 import { ABC } from './abc.js';

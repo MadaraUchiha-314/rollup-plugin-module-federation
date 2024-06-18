@@ -393,9 +393,11 @@ export default function federation(
            * It is important to store the alternate references of all modules so that we can cross-reference those while creating the manifesst json
            */
           if (!federatedModuleInfo[resolvedModulePath]?.alternateReferences) {
-            federatedModuleInfo[resolvedModulePath].alternateReferences = []
+            federatedModuleInfo[resolvedModulePath].alternateReferences = [];
           }
-          federatedModuleInfo[resolvedModulePath].alternateReferences?.push(moduleName);
+          federatedModuleInfo[resolvedModulePath].alternateReferences?.push(
+            moduleName,
+          );
         }
       }
       /**
