@@ -387,6 +387,15 @@ export default function federation(
             chunkNameWithExtension: getFileNameFromChunkName(chunkName),
             versionInfo,
           };
+        } else {
+          /**
+           * Some modules might be declared as both shared and exposed.
+           * It is important to store the alternate references of all modules so that we can cross-reference those while creating the manifesst json
+           */
+          if (!federatedModuleInfo[resolvedModulePath]?.alternateReferences) {
+            federatedModuleInfo[resolvedModulePath].alternateReferences = []
+          }
+          federatedModuleInfo[resolvedModulePath].alternateReferences?.push(moduleName);
         }
       }
       /**

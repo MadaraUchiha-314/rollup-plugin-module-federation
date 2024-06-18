@@ -24,7 +24,7 @@ export function getChunkMetaDataForModule(
     throw new Error('Trying to get the chunk meta-data for remotes which does not make any sense!');
   }
   const moduleInfo = Object.values(federatedModuleInfo).find((mInfo) => {
-    return mInfo.name === moduleName;
+    return (mInfo.name === moduleName) || mInfo.alternateReferences?.includes(moduleName);
   });
   if (!moduleInfo) {
     return {

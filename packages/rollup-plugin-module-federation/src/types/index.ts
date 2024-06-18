@@ -50,6 +50,7 @@ export type BaseModuleInfo = {
   moduleNameOrPath: string;
   sanitizedModuleNameOrPath: string | null;
   type: FederatedModuleType;
+  alternateReferences?: string[];
 };
 
 export type RemoteModuleInfo = BaseModuleInfo & {
