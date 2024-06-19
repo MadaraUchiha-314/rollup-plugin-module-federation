@@ -145,7 +145,11 @@ export function generateManifest({
       },
       globalName: instanceName,
       pluginVersion: federationRuntimeVersion ?? MODULE_VERSION_UNSPECIFIED,
-      publicPath: '',
+      /**
+       * TODO: Fix this ?? Module Federation config doesn't allow to specify a public path (other than getPublicPath)
+       * Issue: https://github.com/module-federation/core/issues/2633
+       */
+      publicPath: 'auto',
     },
     shared: Object.entries(initConfig.shared ?? {}).reduce<ManifestShared[]>(
       (sharedManifest, [sharedPkgName, sharedPkgConfig]) => {
