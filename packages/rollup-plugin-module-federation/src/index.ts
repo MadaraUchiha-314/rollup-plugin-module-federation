@@ -38,6 +38,7 @@ import {
   SharedOrExposedModuleInfo,
   FederatedModuleType,
   ModuleVersionInfo,
+  ConsumedModuleFromRemote,
 } from './types';
 import type { ShareArgs, UserOptions } from '@module-federation/runtime/types';
 
@@ -221,6 +222,8 @@ export default function federation(
    */
   let initConfig: UserOptions;
 
+  const remotesUsed: Record<string, string[]> = {};
+
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
     readFileSync(`${projectRoot}${sep}${PACKAGE_JSON}`, 'utf-8'),
@@ -282,6 +285,18 @@ export default function federation(
       }
     }
     return false;
+  };
+
+  const getRemoteDataFromImport = (importSource: string): ConsumedModuleFromRemote | null => {
+    for (const remoteName in remotes) {
+      if (importSource.includes(`${remoteName}/`)) {
+        return {
+          remoteName,
+          exposedModule: importSource.substring(remoteName.length + 1, importSource.length),
+        };
+      }
+    }
+    return null;
   };
 
   return {
@@ -681,6 +696,16 @@ export default function federation(
                   node?.source?.value,
                 )
               ) {
+                const remoteData = getRemoteDataFromImport(
+                  // @ts-ignore
+                  node?.source?.value,
+                );
+                if (remoteData !== null) {
+                  if (!Object.prototype.hasOwnProperty.call(remotesUsed, remoteData.remoteName)) {
+                    remotesUsed[remoteData.remoteName] = [];
+                  }
+                  remotesUsed[remoteData.remoteName].push(remoteData.exposedModule);
+                }
                 chunkHasFederatedImports = true;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
@@ -776,7 +801,6 @@ export default function federation(
         pkgJson,
         federationConfig,
         exposes,
-        remotes,
         initConfig,
         federatedModuleInfo,
         remoteEntryFileName,
@@ -785,21 +809,12 @@ export default function federation(
             '@module-federation/runtime'
           ],
         bundle,
+        remotesUsed,
       });
       this.emitFile({
         type: 'asset',
         fileName: 'bundle-states.json',
         source: JSON.stringify(bundle, null, 2),
-      });
-      this.emitFile({
-        type: 'asset',
-        fileName: 'federated-module-info.json',
-        source: JSON.stringify(federatedModuleInfo, null, 2),
-      });
-      this.emitFile({
-        type: 'asset',
-        fileName: 'mf-manifest.json',
-        source: JSON.stringify(mfManifest, null, 2),
       });
     },
   };

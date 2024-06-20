@@ -7,6 +7,8 @@ import type {
   moduleFederationPlugin,
   Manifest,
   ManifestShared,
+  ManifestRemote,
+  RemoteWithEntry,
 } from '@module-federation/sdk';
 import type { PackageJson } from 'type-fest';
 import type {
@@ -15,6 +17,7 @@ import type {
   FederatedModuleInfo,
   FederatedModuleType,
   SharedOrExposedModuleInfo,
+  ConsumedModuleFromRemote,
 } from './types';
 import type { OutputBundle, OutputChunk } from 'rollup';
 import type { UserOptions, ShareArgs } from '@module-federation/runtime/types';
@@ -104,22 +107,22 @@ export function generateManifest({
   pkgJson,
   federationConfig,
   exposes,
-  remotes,
   initConfig,
   federatedModuleInfo,
   bundle,
   remoteEntryFileName,
   federationRuntimeVersion,
+  remotesUsed,
 }: {
   pkgJson: PackageJson;
   federationConfig: moduleFederationPlugin.ModuleFederationPluginOptions;
   exposes: ExposesObject;
-  remotes: RemotesObject;
   initConfig: UserOptions;
   federatedModuleInfo: Record<string, FederatedModuleInfo>;
   bundle: OutputBundle;
   remoteEntryFileName: string;
   federationRuntimeVersion: string | undefined;
+  remotesUsed: Record<string, string[]>;
 }): Manifest {
   const instanceName = initConfig.name ?? pkgJson.name ?? DEFAULT_PKG_NAME;
   return {
@@ -202,11 +205,15 @@ export function generateManifest({
         path: exposedModuleName,
       }),
     ),
-    remotes: Object.entries(remotes).map(([key, value]) => ({
-      federationContainerName: '',
-      moduleName: '',
-      alias: '',
-      entry: '',
-    })),
+    remotes: initConfig.remotes.reduce<ManifestRemote[]>((remotes, remoteConfig) => {
+      return remotes.concat(
+        remotesUsed[remoteConfig.name].map((remoteModule) => ({
+          federationContainerName: (remoteConfig as RemoteWithEntry).entry,
+          moduleName: remoteModule,
+          alias: remoteConfig?.alias ?? remoteConfig.name,
+          entry: '*',
+        })),
+      )
+    }, []),
   };
 }
