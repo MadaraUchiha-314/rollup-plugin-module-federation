@@ -92,4 +92,7 @@ export type NodesToRewrite =
   | ExportNamedDeclaration
   | ExportAllDeclaration;
 
-export type ConsumedModuleFromRemote = { remoteName: string, exposedModule: string };
+export type ConsumedModuleFromRemote = {
+  remoteName: string;
+  exposedModule: string;
+};

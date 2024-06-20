@@ -287,12 +287,17 @@ export default function federation(
     return false;
   };
 
-  const getRemoteDataFromImport = (importSource: string): ConsumedModuleFromRemote | null => {
+  const getRemoteDataFromImport = (
+    importSource: string,
+  ): ConsumedModuleFromRemote | null => {
     for (const remoteName in remotes) {
       if (importSource.includes(`${remoteName}/`)) {
         return {
           remoteName,
-          exposedModule: importSource.substring(remoteName.length + 1, importSource.length),
+          exposedModule: importSource.substring(
+            remoteName.length + 1,
+            importSource.length,
+          ),
         };
       }
     }
@@ -701,10 +706,17 @@ export default function federation(
                   node?.source?.value,
                 );
                 if (remoteData !== null) {
-                  if (!Object.prototype.hasOwnProperty.call(remotesUsed, remoteData.remoteName)) {
+                  if (
+                    !Object.prototype.hasOwnProperty.call(
+                      remotesUsed,
+                      remoteData.remoteName,
+                    )
+                  ) {
                     remotesUsed[remoteData.remoteName] = [];
                   }
-                  remotesUsed[remoteData.remoteName].push(remoteData.exposedModule);
+                  remotesUsed[remoteData.remoteName].push(
+                    remoteData.exposedModule,
+                  );
                 }
                 chunkHasFederatedImports = true;
                 const federatedImportStmsStr =

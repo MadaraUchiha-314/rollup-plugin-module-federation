@@ -205,15 +205,18 @@ export function generateManifest({
         path: exposedModuleName,
       }),
     ),
-    remotes: initConfig.remotes.reduce<ManifestRemote[]>((remotes, remoteConfig) => {
-      return remotes.concat(
-        remotesUsed[remoteConfig.name].map((remoteModule) => ({
-          federationContainerName: (remoteConfig as RemoteWithEntry).entry,
-          moduleName: remoteModule,
-          alias: remoteConfig?.alias ?? remoteConfig.name,
-          entry: '*',
-        })),
-      )
-    }, []),
+    remotes: initConfig.remotes.reduce<ManifestRemote[]>(
+      (remotes, remoteConfig) => {
+        return remotes.concat(
+          remotesUsed[remoteConfig.name].map((remoteModule) => ({
+            federationContainerName: (remoteConfig as RemoteWithEntry).entry,
+            moduleName: remoteModule,
+            alias: remoteConfig?.alias ?? remoteConfig.name,
+            entry: '*',
+          })),
+        );
+      },
+      [],
+    ),
   };
 }
