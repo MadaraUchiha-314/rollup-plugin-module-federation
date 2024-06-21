@@ -1,6 +1,6 @@
 const getProjectBRemoteEntry = async (bundler) => {
-  const remoteEntryName = 'my-remote-entry.js';
-  // const remoteEntryName = 'mf-manifest.json';
+  // const remoteEntryName = 'my-remote-entry.js';
+  const remoteEntryName = 'mf-manifest.json';
   if (process.env.CI && process.env.NETLIFY) {
     const projectName = 'rollup-plugin-module-federation';
     const packageName = 'project-b';
