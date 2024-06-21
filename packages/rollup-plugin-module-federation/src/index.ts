@@ -825,8 +825,8 @@ export default function federation(
       });
       this.emitFile({
         type: 'asset',
-        fileName: 'bundle-states.json',
-        source: JSON.stringify(bundle, null, 2),
+        fileName: 'mf-manifest.json',
+        source: JSON.stringify(mfManifest, null, 2),
       });
     },
   };

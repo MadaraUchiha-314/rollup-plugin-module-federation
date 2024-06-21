@@ -12,7 +12,7 @@ const config = async ({ outputFormat }) => ({
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, `dist/rspack/${outputFormat}`),
-    publicPath: 'http://localhost:8080',
+    publicPath: '',
     filename: 'index.js',
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
@@ -27,13 +27,7 @@ const config = async ({ outputFormat }) => ({
     : {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...(await federationconfig('rspack')),
-      /**
-       * Additional stuff for webpack.
-       */
-      library: {
-        type: outputFormat === 'esm' ? 'module' : outputFormat,
-      },
+      ...(await federationconfig('rspack', outputFormat)),
       // This doesn't seem to work ??
       // getPublicPath: `return "https:" + window.navigator.cdn_host + "/resource/app/"`,
     }),

@@ -1,4 +1,4 @@
-export const federationconfig = () => ({
+export const federationconfig = (bundler, outputFormat) => ({
   name: 'sample_project_b',
   filename: 'my-remote-entry.js',
   exposes: {
@@ -11,4 +11,12 @@ export const federationconfig = () => ({
     },
     axios: {},
   },
+  library: {
+    type: outputFormat === 'esm' ? 'module' : outputFormat,
+  },
+  ...(bundler === 'rollup' || bundler === 'rspack'
+    ? {
+      manifest: true,
+    }
+    : {}),
 });

@@ -25,7 +25,7 @@ const config = async ({ outputFormat }) => ({
     : {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...(await federationconfig('webpack')),
+      ...(await federationconfig('webpack', outputFormat)),
       /**
        * Additional stuff for webpack.
        */

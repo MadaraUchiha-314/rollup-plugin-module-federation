@@ -20,7 +20,7 @@ const config = async ({ outputFormat }) => ({
       'process.env.NODE_ENV': JSON.stringify('production'),
       preventAssignment: true,
     }),
-    federation(await federationconfig('rollup')),
+    federation(await federationconfig('rollup', outputFormat)),
     nodeResolve({
       browser: true,
     }),

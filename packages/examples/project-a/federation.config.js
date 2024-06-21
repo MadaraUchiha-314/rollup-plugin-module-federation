@@ -1,7 +1,8 @@
 import { sha256 } from 'js-sha256'; // eslint-disable-line import/no-extraneous-dependencies
 
 const getProjectBRemoteEntry = async (bundler) => {
-  const remoteEntryName = 'my-remote-entry.js';
+  // const remoteEntryName = 'my-remote-entry.js';
+  const remoteEntryName = 'mf-manifest.json';
   if (process.env.CI && process.env.VERCEL) {
     const projectName = 'rollup-plugin-module-federation-project-b';
     const branch = process.env.VERCEL_GIT_COMMIT_REF;
@@ -32,7 +33,7 @@ const getProjectBRemoteEntry = async (bundler) => {
   return url;
 };
 
-export const federationconfig = async (bundler) => ({
+export const federationconfig = async (bundler, outputFormat) => ({
   name: 'sample_project_a',
   filename: 'my-remote-entry.js',
   ...(bundler === 'rollup' || bundler === 'rspack'
@@ -49,9 +50,7 @@ export const federationconfig = async (bundler) => ({
   },
   remoteType: 'module',
   remotes: {
-    'project-b': {
-      external: await getProjectBRemoteEntry(bundler),
-    },
+    'project-b': await getProjectBRemoteEntry(bundler),
   },
   shared: {
     react: {
@@ -60,6 +59,9 @@ export const federationconfig = async (bundler) => ({
     'react-dom': {},
     uuid: {},
     redux: {},
+  },
+  library: {
+    type: outputFormat === 'esm' ? 'module' : outputFormat,
   },
   ...(bundler === 'rollup' || bundler === 'rspack'
     ? {

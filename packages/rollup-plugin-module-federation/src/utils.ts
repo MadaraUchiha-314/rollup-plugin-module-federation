@@ -331,8 +331,7 @@ export function getInitConfig(
         // TODO: Remove this type coercion once we get an answer from module federation team.
         entry: remoteConfig.external as string,
         shareScope: remoteConfig.shareScope,
-        type:
-          remoteType === 'module' || remoteType === 'import' ? 'esm' : 'global',
+        type: remoteType === 'module' || remoteType === 'import' ? 'esm' : 'global',
       };
     }),
   };
