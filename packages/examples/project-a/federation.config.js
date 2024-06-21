@@ -6,8 +6,8 @@ const getProjectBRemoteEntry = async (bundler) => {
     const packageName = 'project-b';
     const reviewId = process.env.REVIEW_ID;
     const branch = process.env.BRANCH;
-    const prefix = branch === 'main' ? 'main' : `deploy-preview-${reviewId}`;
-    const url = `https://${prefix}--${projectName}.netlify.app/packages/examples/${packageName}/dist/${bundler}/esm/${remoteEntryName}`;
+    const prefix = branch === 'main' ? '' : `deploy-preview-${reviewId}--`;
+    const url = `https://${prefix}${projectName}.netlify.app/packages/examples/${packageName}/dist/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
   /**
