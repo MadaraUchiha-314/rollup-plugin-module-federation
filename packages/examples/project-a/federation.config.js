@@ -23,7 +23,7 @@ const getProjectBRemoteEntry = async (bundler) => {
       : `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
     const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
-  } else if (process.env.CI && process.env.NETLIFY) {
+  } if (process.env.CI && process.env.NETLIFY) {
     const projectName = 'rollup-plugin-module-federation';
     const packageName = 'project-b';
     const reviewId = process.env.REVIEW_ID;
