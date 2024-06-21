@@ -25,13 +25,7 @@ const config = ({ outputFormat }) => ({
     : {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...federationconfig('webpack'),
-      /**
-       * Additional stuff for webpack.
-       */
-      library: {
-        type: outputFormat === 'esm' ? 'module' : outputFormat,
-      },
+      ...federationconfig('webpack', outputFormat),
     }),
     new CopyPlugin({
       patterns: [{ from: `public/${outputFormat}/index.html` }],
@@ -39,7 +33,9 @@ const config = ({ outputFormat }) => ({
   ],
 });
 
-export default [
+const multiBuildConfig = [
   config({ outputFormat: 'esm' }),
   config({ outputFormat: 'system' }),
 ];
+
+export default multiBuildConfig;

@@ -1,26 +1,13 @@
-import { sha256 } from 'js-sha256'; // eslint-disable-line import/no-extraneous-dependencies
-
 const getProjectBRemoteEntry = async (bundler) => {
   const remoteEntryName = 'my-remote-entry.js';
-  if (process.env.CI && process.env.VERCEL) {
-    const projectName = 'rollup-plugin-module-federation-project-b';
-    const branch = process.env.VERCEL_GIT_COMMIT_REF;
-    const owner = process.env.VERCEL_GIT_REPO_OWNER;
-    const prefix = 'git-';
-    /**
-     * Taken from: https://vercel.com/docs/deployments/generated-urls#truncation
-     */
-    const hash = sha256(prefix + branch + projectName).slice(0, 6);
-    /**
-     * Taken from: https://vercel.com/docs/deployments/generated-urls#url-with-git-branch
-     * Because the documentation provided is not matching with what we see deployed we have hard-coded certain things. Will iterate as we go along.
-     * If we are building in the main branch, then we will just include the production url.
-     * TODO: Remove all these hacks.
-     */
-    const subDomain = branch === 'main'
-      ? projectName
-      : `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
-    const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
+  // const remoteEntryName = 'mf-manifest.json';
+  if (process.env.CI && process.env.NETLIFY) {
+    const projectName = 'rollup-plugin-module-federation';
+    const packageName = 'project-b';
+    const reviewId = process.env.REVIEW_ID;
+    const branch = process.env.BRANCH;
+    const prefix = branch === 'main' ? 'main' : `deploy-preview-${reviewId}`;
+    const url = `https://${prefix}--${projectName}.netlify.app/packages/examples/${packageName}/dist/${bundler}/esm/${remoteEntryName}`;
     return url;
   }
   /**
@@ -32,9 +19,14 @@ const getProjectBRemoteEntry = async (bundler) => {
   return url;
 };
 
-export const federationconfig = async (bundler) => ({
+export const federationconfig = async (bundler, outputFormat) => ({
   name: 'sample_project_a',
   filename: 'my-remote-entry.js',
+  ...(bundler === 'rollup' || bundler === 'rspack'
+    ? {
+      manifest: true,
+    }
+    : {}),
   exposes: {
     './react': 'react',
     './pqr': './src/pqr.js',
@@ -44,9 +36,7 @@ export const federationconfig = async (bundler) => ({
   },
   remoteType: 'module',
   remotes: {
-    'project-b': {
-      external: await getProjectBRemoteEntry(bundler),
-    },
+    'project-b': await getProjectBRemoteEntry(bundler),
   },
   shared: {
     react: {
@@ -56,7 +46,10 @@ export const federationconfig = async (bundler) => ({
     uuid: {},
     redux: {},
   },
-  ...((bundler === 'rollup' || bundler === 'rspack')
+  library: {
+    type: outputFormat === 'esm' ? 'module' : outputFormat,
+  },
+  ...(bundler === 'rollup' || bundler === 'rspack'
     ? {
       runtimePlugins: ['./ExampleRuntimePlugin.js'],
     }

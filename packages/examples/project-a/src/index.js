@@ -3,6 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 /* eslint-disable-next-line import/no-unresolved */
 import Button, { someThingElse } from 'project-b/button';
+/* eslint-disable-next-line import/no-unresolved */
+import Link, { someThingDifferent } from 'project-b/link';
+
 import { ABC } from './abc.js';
 
 export { createStore, compose } from 'redux';
@@ -25,6 +28,9 @@ export async function doSomething() {
 
   console.log('Button from project-b is: ', Button);
   console.log('someThingElse from project-b is: ', someThingElse());
+
+  console.log('Link from project-b is: ', Link);
+  console.log('someThingDifferent from project-b is: ', someThingDifferent());
 
   return {
     React,
