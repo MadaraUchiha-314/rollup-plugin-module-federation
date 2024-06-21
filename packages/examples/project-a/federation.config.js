@@ -23,6 +23,14 @@ const getProjectBRemoteEntry = async (bundler) => {
       : `${projectName.slice(0, 35)}-git-${hash}-${owner}`;
     const url = `https://${subDomain}.vercel.app/${bundler}/esm/${remoteEntryName}`;
     return url;
+  } else if (process.env.CI && process.env.NETLIFY) {
+    const projectName = 'rollup-plugin-module-federation';
+    const packageName = 'project-b';
+    const reviewId = process.env.REVIEW_ID;
+    const branch = process.env.BRANCH;
+    const prefix = branch === 'main' ? 'main' : `deploy-preview-${reviewId}`;
+    const url = `https://${prefix}--${projectName}.netlify.app/packages/examples/${packageName}/dist/${bundler}/esm/${remoteEntryName}`;
+    return url;
   }
   /**
    * TODO: When we migrate to vite or something similar, we need to figure out the url from that.
