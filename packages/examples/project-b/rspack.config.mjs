@@ -16,7 +16,7 @@ const config = ({ outputFormat }) => ({
       type: outputFormat === 'esm' ? 'module' : outputFormat,
     },
     publicPath:
-      'http://localhost:8080/packages/examples/project-b/dist/rollup/esm/',
+      'http://localhost:8080/packages/examples/project-b/dist/rspack/esm/',
   },
   ...(outputFormat === 'esm'
     ? {
