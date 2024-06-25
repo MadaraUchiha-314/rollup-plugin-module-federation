@@ -18,7 +18,7 @@ export const federationconfig = (bundler, outputFormat) => ({
     ? {
       manifest: true,
       getPublicPath:
-          "function() { return window.location.href.replace('project-a', 'project-b'); }",
+          "return window.location.href.replace('project-a', 'project-b')",
     }
     : {}),
 });
