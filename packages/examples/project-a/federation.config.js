@@ -48,7 +48,7 @@ export const federationconfig = async (bundler, outputFormat) => ({
     ? {
       runtimePlugins: ['./ExampleRuntimePlugin.js'],
       manifest: true,
-      getPublicPath: 'function() { return window.location.href; }',
+      getPublicPath: 'return window.location.href',
     }
     : {}),
 });
