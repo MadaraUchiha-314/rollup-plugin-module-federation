@@ -152,10 +152,9 @@ export function generateManifest({
        * TODO: Fix this ?? Module Federation config doesn't allow to specify a public path (other than getPublicPath)
        * Issue: https://github.com/module-federation/core/issues/2633
        */
-      publicPath: '',
       ...(federationConfig?.getPublicPath
         ? { getPublicPath: federationConfig.getPublicPath }
-        : {}),
+        : { publicPath: '' }),
     },
     shared: Object.entries(initConfig.shared ?? {}).reduce<ManifestShared[]>(
       (sharedManifest, [sharedPkgName, sharedPkgConfig]) => {
