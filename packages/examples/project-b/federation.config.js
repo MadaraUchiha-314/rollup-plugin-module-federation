@@ -17,7 +17,8 @@ export const federationconfig = (bundler, outputFormat) => ({
   ...(bundler === 'rollup' || bundler === 'rspack'
     ? {
       manifest: true,
-      getPublicPath: 'function() { return window.location.href.replace(\'project-a\', \'project-b\'); }',
+      getPublicPath:
+          "function() { return window.location.href.replace('project-a', 'project-b'); }",
     }
     : {}),
 });
