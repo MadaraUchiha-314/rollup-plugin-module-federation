@@ -153,7 +153,9 @@ export function generateManifest({
        * Issue: https://github.com/module-federation/core/issues/2633
        */
       publicPath: '',
-      ...(federationConfig?.getPublicPath ? { getPublicPath: federationConfig.getPublicPath } : {}),
+      ...(federationConfig?.getPublicPath
+        ? { getPublicPath: federationConfig.getPublicPath }
+        : {}),
     },
     shared: Object.entries(initConfig.shared ?? {}).reduce<ManifestShared[]>(
       (sharedManifest, [sharedPkgName, sharedPkgConfig]) => {
