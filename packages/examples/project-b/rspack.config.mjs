@@ -15,6 +15,7 @@ const config = ({ outputFormat }) => ({
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
     },
+    publicPath: 'auto',
   },
   ...(outputFormat === 'esm'
     ? {
