@@ -1,6 +1,6 @@
 const getProjectBRemoteEntry = async (bundler) => {
-  const remoteEntryName = 'my-remote-entry.js';
-  // const remoteEntryName = 'mf-manifest.json';
+  // const remoteEntryName = 'my-remote-entry.js';
+  const remoteEntryName = 'mf-manifest.json';
   if (process.env.CI && process.env.NETLIFY) {
     const projectName = 'rollup-plugin-module-federation';
     const packageName = 'project-b';
@@ -22,11 +22,6 @@ const getProjectBRemoteEntry = async (bundler) => {
 export const federationconfig = async (bundler, outputFormat) => ({
   name: 'sample_project_a',
   filename: 'my-remote-entry.js',
-  ...(bundler === 'rollup' || bundler === 'rspack'
-    ? {
-      manifest: true,
-    }
-    : {}),
   exposes: {
     './react': 'react',
     './pqr': './src/pqr.js',
@@ -52,6 +47,8 @@ export const federationconfig = async (bundler, outputFormat) => ({
   ...(bundler === 'rollup' || bundler === 'rspack'
     ? {
       runtimePlugins: ['./ExampleRuntimePlugin.js'],
+      manifest: true,
+      getPublicPath: 'return window.location.href',
     }
     : {}),
 });

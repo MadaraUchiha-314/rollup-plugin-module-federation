@@ -16,6 +16,7 @@ const config = async ({ outputFormat }) => ({
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
     },
+    publicPath: 'auto',
   },
   ...(outputFormat === 'esm'
     ? {
@@ -27,8 +28,6 @@ const config = async ({ outputFormat }) => ({
   plugins: [
     new ModuleFederationPlugin({
       ...(await federationconfig('rspack', outputFormat)),
-      // This doesn't seem to work ??
-      // getPublicPath: `return "https:" + window.navigator.cdn_host + "/resource/app/"`,
     }),
     new CopyPlugin({
       patterns: [{ from: `public/${outputFormat}/index.html` }],
