@@ -54,4 +54,3 @@ export async function doSomething() {
 
 /* eslint-enable no-console */
 /* eslint-disable import/no-unresolved */
-

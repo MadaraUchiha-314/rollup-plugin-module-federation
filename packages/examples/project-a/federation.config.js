@@ -47,7 +47,7 @@ export const federationconfig = async (bundler, outputFormat) => ({
     ? {
       runtimePlugins: ['./ExampleRuntimePlugin.js'],
       manifest: true,
-      getPublicPath: 'return window.location.href',
+      getPublicPath: `return window.location.origin + '/packages/examples/project-a/dist/${bundler}/${outputFormat}/';`,
     }
     : {}),
 });
