@@ -13,11 +13,9 @@ import type {
 import type { PackageJson } from 'type-fest';
 import type {
   ExposesObject,
-  RemotesObject,
   FederatedModuleInfo,
   FederatedModuleType,
   SharedOrExposedModuleInfo,
-  ConsumedModuleFromRemote,
 } from './types';
 import type { OutputBundle, OutputChunk } from 'rollup';
 import type { UserOptions, ShareArgs } from '@module-federation/runtime/types';
@@ -187,26 +185,24 @@ export function generateManifest({
       },
       [],
     ),
-    exposes: Object.entries(exposes).map(
-      ([exposedModuleName, exposedModuleConfig]) => ({
-        id: `${instanceName}:${exposedModuleName.replace('./', '')}`,
-        name: exposedModuleName.replace('./', ''),
-        assets: {
-          js: getChunkMetaDataForModule(
-            exposedModuleName,
-            'exposed',
-            remoteEntryFileName,
-            federatedModuleInfo,
-            bundle,
-          ),
-          css: {
-            async: [],
-            sync: [],
-          },
+    exposes: Object.entries(exposes).map(([exposedModuleName]) => ({
+      id: `${instanceName}:${exposedModuleName.replace('./', '')}`,
+      name: exposedModuleName.replace('./', ''),
+      assets: {
+        js: getChunkMetaDataForModule(
+          exposedModuleName,
+          'exposed',
+          remoteEntryFileName,
+          federatedModuleInfo,
+          bundle,
+        ),
+        css: {
+          async: [],
+          sync: [],
         },
-        path: exposedModuleName,
-      }),
-    ),
+      },
+      path: exposedModuleName,
+    })),
     remotes: initConfig.remotes.reduce<ManifestRemote[]>(
       (remotes, remoteConfig) => {
         return remotes.concat(

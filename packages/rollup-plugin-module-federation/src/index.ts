@@ -808,26 +808,39 @@ export default function federation(
         chunkFileNames: '[name].js',
       };
     },
-    generateBundle(options, bundle) {
-      const mfManifest = generateManifest({
-        pkgJson,
-        federationConfig,
-        exposes,
-        initConfig,
-        federatedModuleInfo,
-        remoteEntryFileName,
-        federationRuntimeVersion:
-          rollupPluginModuleFederationPkgJson?.dependencies?.[
-            '@module-federation/runtime'
-          ],
-        bundle,
-        remotesUsed,
-      });
-      this.emitFile({
-        type: 'asset',
-        fileName: 'mf-manifest.json',
-        source: JSON.stringify(mfManifest, null, 2),
-      });
+    generateBundle(_, bundle) {
+      if (federationConfig?.manifest) {
+        if (typeof federationConfig?.getPublicPath !== 'string') {
+          /**
+           * NOTO: In rspack, they check for either publicPath or getPublicPath
+           * In rollup the bundler doesn't provide any avenues for the user to provide publicPath
+           * So we rely on user providing getPublicPath function as part of the federation config.
+           */
+          console.warn(
+            'getPublicPath is not specified. Skipping manifest generation',
+          );
+        } else {
+          const mfManifest = generateManifest({
+            pkgJson,
+            federationConfig,
+            exposes,
+            initConfig,
+            federatedModuleInfo,
+            remoteEntryFileName,
+            federationRuntimeVersion:
+              rollupPluginModuleFederationPkgJson?.dependencies?.[
+                '@module-federation/runtime'
+              ],
+            bundle,
+            remotesUsed,
+          });
+          this.emitFile({
+            type: 'asset',
+            fileName: 'mf-manifest.json',
+            source: JSON.stringify(mfManifest, null, 2),
+          });
+        }
+      }
     },
   };
 }
