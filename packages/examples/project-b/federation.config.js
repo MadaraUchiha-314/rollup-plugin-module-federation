@@ -17,7 +17,7 @@ export const federationconfig = (bundler, outputFormat) => ({
   ...(bundler === 'rollup' || bundler === 'rspack'
     ? {
       manifest: true,
-      getPublicPath: `return window.location.origin + '/packages/examples/project-b/dist/${bundler}/esm/';`,
+      getPublicPath: `return window.location.origin + '/packages/examples/project-b/dist/${bundler}/${outputFormat}/';`,
     }
     : {}),
 });
