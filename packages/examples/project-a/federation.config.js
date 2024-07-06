@@ -1,4 +1,4 @@
-const getProjectBRemoteEntry = async (bundler) => {
+const getProjectBRemoteEntry = async (bundler, outputFormat) => {
   const remoteEntryName = bundler === 'webpack' ? 'my-remote-entry.js' : 'mf-manifest.json';
   if (process.env.CI && process.env.NETLIFY) {
     const projectName = 'rollup-plugin-module-federation';
@@ -6,7 +6,7 @@ const getProjectBRemoteEntry = async (bundler) => {
     const reviewId = process.env.REVIEW_ID;
     const branch = process.env.BRANCH;
     const prefix = branch === 'main' ? '' : `deploy-preview-${reviewId}--`;
-    const url = `https://${prefix}${projectName}.netlify.app/packages/examples/${packageName}/dist/${bundler}/esm/${remoteEntryName}`;
+    const url = `https://${prefix}${projectName}.netlify.app/packages/examples/${packageName}/dist/${bundler}/${outputFormat}/${remoteEntryName}`;
     return url;
   }
   /**
@@ -14,7 +14,7 @@ const getProjectBRemoteEntry = async (bundler) => {
    */
   const domain = 'localhost:8080';
   const packageName = 'project-b';
-  const url = `http://${domain}/packages/examples/${packageName}/dist/${bundler}/esm/${remoteEntryName}`;
+  const url = `http://${domain}/packages/examples/${packageName}/dist/${bundler}/${outputFormat}/${remoteEntryName}`;
   return url;
 };
 
@@ -30,7 +30,7 @@ export const federationconfig = async (bundler, outputFormat) => ({
   },
   remoteType: 'module',
   remotes: {
-    'project-b': await getProjectBRemoteEntry(bundler),
+    'project-b': await getProjectBRemoteEntry(bundler, outputFormat),
   },
   shared: {
     react: {

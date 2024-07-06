@@ -136,7 +136,10 @@ export function generateManifest({
       remoteEntry: {
         name: federationConfig?.filename || `${REMOTE_ENTRY_NAME}.js`,
         path: '',
-        type: federationConfig?.library?.type === 'module' ? 'esm' : 'global',
+        type:
+          federationConfig?.library?.type === 'module'
+            ? 'esm'
+            : federationConfig?.library?.type ?? 'global',
       },
       types: {
         path: '',
