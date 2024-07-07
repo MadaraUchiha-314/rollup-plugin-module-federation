@@ -1,10 +1,9 @@
 import rspack from '@rspack/core';
 import { federationconfig } from './federation.config.js';
-
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 import path from 'node:path';
 
 const __dirname = path.resolve('.');
-const { ModuleFederationPlugin } = rspack.container;
 const { CopyRspackPlugin: CopyPlugin } = rspack;
 
 const config = ({ outputFormat }) => ({
@@ -16,6 +15,7 @@ const config = ({ outputFormat }) => ({
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
     },
+    publicPath: 'auto',
   },
   ...(outputFormat === 'esm'
     ? {
@@ -29,13 +29,7 @@ const config = ({ outputFormat }) => ({
     : {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...federationconfig('rspack'),
-      /**
-       * Additional stuff for webpack.
-       */
-      library: {
-        type: outputFormat === 'esm' ? 'module' : outputFormat,
-      },
+      ...federationconfig('rspack', outputFormat),
     }),
     new CopyPlugin({
       patterns: [{ from: `public/${outputFormat}/index.html` }],

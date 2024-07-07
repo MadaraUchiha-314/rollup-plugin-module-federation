@@ -1,10 +1,16 @@
-import { ExposesConfig, SharedConfig, RemotesConfig } from '../../types';
-import type { ShareArgs } from '@module-federation/runtime/dist/type.cjs.js';
+import { moduleFederationPlugin } from '@module-federation/sdk';
+import type { ShareArgs } from '@module-federation/runtime/types';
+import type {
+  ImportDeclaration,
+  ImportExpression,
+  ExportNamedDeclaration,
+  ExportAllDeclaration,
+} from 'estree';
 /**
  * We rewrite the type for SharedObject to be that of the most verbose definition.
  */
 export type SharedObject = {
-  [index: string]: SharedConfig & {
+  [index: string]: moduleFederationPlugin.SharedConfig & {
     import: string | false;
   };
 };
@@ -13,14 +19,14 @@ export type SharedObject = {
  * We rewrite the type for ExposesObject to be that of the most verbose definition.
  */
 export type ExposesObject = {
-  [index: string]: ExposesConfig;
+  [index: string]: moduleFederationPlugin.ExposesConfig;
 };
 
 /**
  * We rewrite the type for RemotesObject to be that of the most verbose definition.
  */
 export type RemotesObject = {
-  [index: string]: RemotesConfig;
+  [index: string]: moduleFederationPlugin.RemotesConfig;
 };
 
 export type ShareInfo = {
@@ -44,6 +50,7 @@ export type BaseModuleInfo = {
   moduleNameOrPath: string;
   sanitizedModuleNameOrPath: string | null;
   type: FederatedModuleType;
+  alternateReferences?: string[];
 };
 
 export type RemoteModuleInfo = BaseModuleInfo & {
@@ -54,7 +61,7 @@ export type RemoteModuleInfo = BaseModuleInfo & {
 };
 
 export type SharedOrExposedModuleInfo = BaseModuleInfo & {
-  chunkPath: string;
+  chunkNameWithExtension: string;
   versionInfo: ModuleVersionInfo;
   type: FederatedModuleType;
 };
@@ -64,7 +71,7 @@ export type FederatedModuleInfo = SharedOrExposedModuleInfo | RemoteModuleInfo;
 export type ModuleMapEntry = {
   name: string;
   moduleNameOrPath: string;
-  chunkPath: string | null;
+  chunkNameWithExtension: string | null;
   type: FederatedModuleType;
   version: string | null;
   requiredVersion: string | null;
@@ -84,3 +91,8 @@ export type NodesToRewrite =
   | ImportExpression
   | ExportNamedDeclaration
   | ExportAllDeclaration;
+
+export type ConsumedModuleFromRemote = {
+  remoteName: string;
+  exposedModule: string;
+};

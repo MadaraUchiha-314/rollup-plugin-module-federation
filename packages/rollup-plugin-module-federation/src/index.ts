@@ -5,6 +5,8 @@ import { EOL } from 'node:os';
 import { asyncWalk } from 'estree-walker';
 import MagicString from 'magic-string';
 
+import { generateManifest } from './manifest';
+
 import {
   getModulePathFromResolvedId,
   sanitizeModuleName,
@@ -15,11 +17,17 @@ import {
   getExposesConfig,
   getRemotesConfig,
   getInitConfig,
-} from './utils.js';
-import { PACKAGE_JSON } from './constants';
+} from './utils';
+import {
+  PACKAGE_JSON,
+  MODULE_VERSION_UNSPECIFIED,
+  REMOTE_ENTRY_NAME,
+} from './constants';
+
+import rollupPluginModuleFederationPkgJson from '../package.json';
 
 import type { ImportDeclaration, ExportNamedDeclaration, Node } from 'estree';
-import type { ModuleFederationPluginOptions } from '../types';
+import type { moduleFederationPlugin } from '@module-federation/sdk';
 import type { PackageJson } from 'type-fest';
 import type { Plugin, ManualChunksOption, AcornNode } from 'rollup';
 
@@ -30,7 +38,9 @@ import {
   SharedOrExposedModuleInfo,
   FederatedModuleType,
   ModuleVersionInfo,
+  ConsumedModuleFromRemote,
 } from './types';
+import type { ShareArgs, UserOptions } from '@module-federation/runtime/types';
 
 const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   ImportDeclaration: 'ImportDeclaration',
@@ -47,7 +57,6 @@ const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
 
 const REMOTE_ENTRY_MODULE_ID: string = '__remoteEntry__';
 const REMOTE_ENTRY_FILE_NAME: string = `${REMOTE_ENTRY_MODULE_ID}.js`;
-const REMOTE_ENTRY_NAME: string = 'remoteEntry';
 
 /**
  * All imports to shared/exposed/remotes will get converted to this expression.
@@ -60,8 +69,6 @@ const FEDERATION_RUNTIME_PACKAGE = '@module-federation/runtime';
 const FEDERATION_RUNTIME_PACKAGE_CHUNK_NAME = '__module_federation_runtime__';
 
 const FEDERATION_RUNTIME_PLUGIN = '__module_federation_runtime__plugin__';
-
-const MODULE_VERSION_UNSPECIFIED: string = '0.0.0';
 
 export function getFederatedImportStatementForNode(
   node: NodesToRewrite,
@@ -194,7 +201,7 @@ export function getFederatedImportStatementForNode(
 }
 
 export default function federation(
-  federationConfig: ModuleFederationPluginOptions,
+  federationConfig: moduleFederationPlugin.ModuleFederationPluginOptions,
 ): Plugin {
   const { name, filename, shareScope = 'default' } = federationConfig;
 
@@ -209,6 +216,13 @@ export default function federation(
   const remoteEntryFileName: string = filename ?? REMOTE_ENTRY_FILE_NAME;
 
   const { runtimePlugins } = federationConfig;
+
+  /**
+   * This will be set in load hook when we generate the remote entry.
+   */
+  let initConfig: UserOptions;
+
+  const remotesUsed: Record<string, string[]> = {};
 
   const projectRoot = resolve();
   const pkgJson: PackageJson = JSON.parse(
@@ -273,17 +287,22 @@ export default function federation(
     return false;
   };
 
-  /**
-   * Get the resolved version for the module.
-   * @param {string} moduleNameOrPath The module name for which a version required.
-   * @returns
-   */
-  const getVersionForModule = (moduleNameOrPath: string) =>
-    (
-      Object.values(federatedModuleInfo).find(
-        (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
-      ) as SharedOrExposedModuleInfo
-    ).versionInfo.version ?? null;
+  const getRemoteDataFromImport = (
+    importSource: string,
+  ): ConsumedModuleFromRemote | null => {
+    for (const remoteName in remotes) {
+      if (importSource.includes(`${remoteName}/`)) {
+        return {
+          remoteName,
+          exposedModule: importSource.substring(
+            remoteName.length + 1,
+            importSource.length,
+          ),
+        };
+      }
+    }
+    return null;
+  };
 
   return {
     name: 'rollup-plugin-federation',
@@ -387,9 +406,20 @@ export default function federation(
             moduleNameOrPath,
             sanitizedModuleNameOrPath,
             type,
-            chunkPath: getFileNameFromChunkName(chunkName),
+            chunkNameWithExtension: getFileNameFromChunkName(chunkName),
             versionInfo,
           };
+        } else {
+          /**
+           * Some modules might be declared as both shared and exposed.
+           * It is important to store the alternate references of all modules so that we can cross-reference those while creating the manifesst json
+           */
+          if (!federatedModuleInfo[resolvedModulePath]?.alternateReferences) {
+            federatedModuleInfo[resolvedModulePath].alternateReferences = [];
+          }
+          federatedModuleInfo[resolvedModulePath].alternateReferences?.push(
+            moduleName,
+          );
         }
       }
       /**
@@ -431,7 +461,7 @@ export default function federation(
        * Provide the code for the remote entry.
        */
       if (id === REMOTE_ENTRY_MODULE_ID) {
-        const initConfig = getInitConfig(
+        initConfig = getInitConfig(
           name,
           shared,
           remotes,
@@ -456,6 +486,22 @@ export default function federation(
          */
         remoteEntryCode.append(
           Object.entries(initConfig?.shared ?? {})
+            .reduce<Array<[string, ShareArgs]>>(
+              (allSharedConfigs, [moduleNameOrPath, sharedConfigs]) => {
+                if (Array.isArray(sharedConfigs)) {
+                  return allSharedConfigs.concat(
+                    sharedConfigs.map((sharedConfigForPkg) => [
+                      moduleNameOrPath,
+                      sharedConfigForPkg,
+                    ]),
+                  );
+                }
+                return allSharedConfigs.concat([
+                  [moduleNameOrPath, sharedConfigs],
+                ]);
+              },
+              [],
+            )
             .filter(
               ([_, sharedConfigForPkg]) =>
                 sharedConfigForPkg.shareConfig?.eager,
@@ -496,36 +542,42 @@ export default function federation(
               remotes: ${JSON.stringify(initConfig.remotes)},
               shared: {
                 ${Object.entries(initConfig.shared ?? {})
-                  .map(([moduleNameOrPath, sharedConfigForPkg]) => {
-                    return `
-                      '${moduleNameOrPath}': {
-                        ${
-                          /**
-                           * We inject the entire object as json and then remote the starting and ending curly braces
-                           * This is to add further keys to the object.
-                           */
-                          JSON.stringify(sharedConfigForPkg).replace(
-                            /^\{|\}$/g,
-                            '',
-                          )
-                        },
-                        version: '${getVersionForModule(moduleNameOrPath)}',
-                        ${
-                          /**
-                           * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
-                           * QUESTION: How does one even support import: false with this ?
-                           * Bug: https://github.com/module-federation/universe/issues/2020
-                           */
-                          !shared[moduleNameOrPath]?.import
-                            ? `get: () => Promise.resolve().then(() => () => null),`
-                            : /**
-                             * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                  .map(([moduleNameOrPath, sharedConfigs]) => {
+                    return Array.isArray(sharedConfigs)
+                      ? sharedConfigs
+                      : [sharedConfigs]
+                          .map((sharedConfigForPkg) => {
+                            return `
+                        '${moduleNameOrPath}': {
+                          ${
+                            /**
+                             * We inject the entire object as json and then remote the starting and ending curly braces
+                             * This is to add further keys to the object.
                              */
-                            sharedConfigForPkg.shareConfig?.eager
-                            ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
-                            : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
-                        }
-                      },`;
+                            JSON.stringify(sharedConfigForPkg).replace(
+                              /^\{|\}$/g,
+                              '',
+                            )
+                          },
+                          ${
+                            /**
+                             * If the dependency is declared as a import: false, then we don't need to provide it to the initConfig.
+                             * QUESTION: How does one even support import: false with this ?
+                             * Bug: https://github.com/module-federation/universe/issues/2020
+                             */
+                            !shared[moduleNameOrPath]?.import
+                              ? `get: () => Promise.resolve().then(() => () => null),`
+                              : /**
+                               * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
+                               */
+                              sharedConfigForPkg.shareConfig?.eager
+                              ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
+                              : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
+                          }
+                        },
+                      `;
+                          })
+                          .join('');
                   })
                   .join('')}
               }
@@ -649,6 +701,23 @@ export default function federation(
                   node?.source?.value,
                 )
               ) {
+                const remoteData = getRemoteDataFromImport(
+                  // @ts-ignore
+                  node?.source?.value,
+                );
+                if (remoteData !== null) {
+                  if (
+                    !Object.prototype.hasOwnProperty.call(
+                      remotesUsed,
+                      remoteData.remoteName,
+                    )
+                  ) {
+                    remotesUsed[remoteData.remoteName] = [];
+                  }
+                  remotesUsed[remoteData.remoteName].push(
+                    remoteData.exposedModule,
+                  );
+                }
                 chunkHasFederatedImports = true;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
@@ -738,6 +807,40 @@ export default function federation(
         manualChunks,
         chunkFileNames: '[name].js',
       };
+    },
+    generateBundle(_, bundle) {
+      if (federationConfig?.manifest) {
+        if (typeof federationConfig?.getPublicPath !== 'string') {
+          /**
+           * NOTO: In rspack, they check for either publicPath or getPublicPath
+           * In rollup the bundler doesn't provide any avenues for the user to provide publicPath
+           * So we rely on user providing getPublicPath function as part of the federation config.
+           */
+          console.warn(
+            'getPublicPath is not specified. Skipping manifest generation',
+          );
+        } else {
+          const mfManifest = generateManifest({
+            pkgJson,
+            federationConfig,
+            exposes,
+            initConfig,
+            federatedModuleInfo,
+            remoteEntryFileName,
+            federationRuntimeVersion:
+              rollupPluginModuleFederationPkgJson?.dependencies?.[
+                '@module-federation/runtime'
+              ],
+            bundle,
+            remotesUsed,
+          });
+          this.emitFile({
+            type: 'asset',
+            fileName: 'mf-manifest.json',
+            source: JSON.stringify(mfManifest, null, 2),
+          });
+        }
+      }
     },
   };
 }

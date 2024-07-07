@@ -1,19 +1,18 @@
 import { dirname, sep } from 'node:path';
 import { existsSync, readFileSync, lstatSync } from 'node:fs';
-import { PACKAGE_JSON } from './constants';
+import { PACKAGE_JSON, DEFAULT_CONTAINER_NAME } from './constants';
 import {
   generateExposeFilename,
   generateShareFilename,
+  moduleFederationPlugin,
 } from '@module-federation/sdk';
-import type { UserOptions } from '@module-federation/runtime/dist/types.cjs.js';
 
+import type { UserOptions } from '@module-federation/runtime/types';
 import type { PackageJson } from 'type-fest';
-import type { Exposes, Remotes, Shared } from '../types';
 import type {
   SharedObject,
   ExposesObject,
   RemotesObject,
-  ShareInfo,
   FederatedModuleInfo,
   SharedOrExposedModuleInfo,
 } from './types';
@@ -54,7 +53,7 @@ export function getChunkNameForModule({
 }
 
 export function getFileNameFromChunkName(chunkName: string): string {
-  return `.${sep}${chunkName}.js`;
+  return `${chunkName}.js`;
 }
 
 export function getNearestPackageJson(path: string): PackageJson | null {
@@ -70,7 +69,24 @@ export function getNearestPackageJson(path: string): PackageJson | null {
   return getNearestPackageJson(parentDir);
 }
 
-export function getSharedConfig(shared: Shared): SharedObject {
+/**
+ * Get the resolved version for the module.
+ * @param {string} moduleNameOrPath The module name for which a version required.
+ * @returns
+ */
+const getVersionForModule = (
+  federatedModuleInfo: Record<string, FederatedModuleInfo>,
+  moduleNameOrPath: string,
+) =>
+  (
+    Object.values(federatedModuleInfo).find(
+      (moduleInfo) => moduleInfo.moduleNameOrPath === moduleNameOrPath,
+    ) as SharedOrExposedModuleInfo
+  ).versionInfo.version ?? null;
+
+export function getSharedConfig(
+  shared: moduleFederationPlugin.Shared,
+): SharedObject {
   if (Array.isArray(shared)) {
     return shared.reduce<SharedObject>(
       (sharedObject, sharedEntity): SharedObject => {
@@ -128,7 +144,9 @@ export function getSharedConfig(shared: Shared): SharedObject {
   }
 }
 
-export function getExposesConfig(exposes: Exposes): ExposesObject {
+export function getExposesConfig(
+  exposes: moduleFederationPlugin.Exposes,
+): ExposesObject {
   if (Array.isArray(exposes)) {
     return exposes.reduce<ExposesObject>(
       (exposedModules, exposedEntity): ExposesObject => {
@@ -184,7 +202,9 @@ export function getExposesConfig(exposes: Exposes): ExposesObject {
   }
 }
 
-export function getRemotesConfig(remotes: Remotes): RemotesObject {
+export function getRemotesConfig(
+  remotes: moduleFederationPlugin.Remotes,
+): RemotesObject {
   if (Array.isArray(remotes)) {
     return remotes.reduce<RemotesObject>(
       (remoteModules, remoteEntity): RemotesObject => {
@@ -259,18 +279,23 @@ export function getRequiredVersionForModule(
 }
 
 export function getInitConfig(
-  name: string,
+  name: string | undefined,
   shared: SharedObject,
   remotes: RemotesObject,
   federatedModuleInfo: Record<string, FederatedModuleInfo>,
   remoteType: string,
 ): UserOptions {
   return {
-    name,
-    shared: Object.entries(shared).reduce<ShareInfo>(
-      (sharedConfig, [pkgName, sharedConfigForPkg]): ShareInfo => {
+    name: name ?? DEFAULT_CONTAINER_NAME,
+    shared: Object.entries(shared).reduce(
+      (sharedConfig, [pkgName, sharedConfigForPkg]) => {
         const sharedOptionForPkg = {
-          version: sharedConfigForPkg.version as string,
+          version:
+            sharedConfigForPkg?.version ??
+            getVersionForModule(
+              federatedModuleInfo,
+              sharedConfigForPkg.import ? sharedConfigForPkg.import : pkgName,
+            ),
           shareConfig: {
             singleton: sharedConfigForPkg.singleton,
             requiredVersion: getRequiredVersionForModule(
@@ -286,11 +311,9 @@ export function getInitConfig(
           /**
            * If its a package for which the user has specified import: false, then we load whatever version is given to us from the shared scope.
            */
-          ...(sharedConfigForPkg.import === false
-            ? {
-                strategy: 'loaded-first',
-              }
-            : {}),
+          strategy: sharedConfigForPkg.import
+            ? 'version-first'
+            : 'loaded-first',
         };
         return {
           ...sharedConfig,
@@ -301,17 +324,19 @@ export function getInitConfig(
       },
       {},
     ),
-    /**
-     * TODO: Find a type definition of how plugins can be injected during build time.
-     */
     plugins: [],
     remotes: Object.entries(remotes).map(([remoteName, remoteConfig]) => {
       return {
         name: remoteName,
-        entry: remoteConfig.external,
+        // TODO: Remove this type coercion once we get an answer from module federation team.
+        entry: remoteConfig.external as string,
         shareScope: remoteConfig.shareScope,
         type:
-          remoteType === 'module' || remoteType === 'import' ? 'esm' : 'global',
+          remoteType === 'module' || remoteType === 'import'
+            ? 'esm'
+            : remoteType === 'system'
+            ? 'system'
+            : 'global',
       };
     }),
   };

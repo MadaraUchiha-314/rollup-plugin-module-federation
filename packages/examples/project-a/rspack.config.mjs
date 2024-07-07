@@ -1,10 +1,10 @@
 import rspack from '@rspack/core';
 import { federationconfig } from './federation.config.js';
 import path from 'node:path';
+import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 
 const __dirname = path.resolve('.');
 
-const { ModuleFederationPlugin } = rspack.container;
 const { CopyRspackPlugin: CopyPlugin } = rspack;
 
 const config = async ({ outputFormat }) => ({
@@ -16,26 +16,18 @@ const config = async ({ outputFormat }) => ({
     library: {
       type: outputFormat === 'esm' ? 'module' : outputFormat,
     },
+    publicPath: 'auto',
   },
   ...(outputFormat === 'esm'
     ? {
         experiments: {
-          rspackFuture: {
-            newTreeshaking: true,
-          },
           outputModule: true,
         },
       }
     : {}),
   plugins: [
     new ModuleFederationPlugin({
-      ...(await federationconfig('rspack')),
-      /**
-       * Additional stuff for webpack.
-       */
-      library: {
-        type: outputFormat === 'esm' ? 'module' : outputFormat,
-      },
+      ...(await federationconfig('rspack', outputFormat)),
     }),
     new CopyPlugin({
       patterns: [{ from: `public/${outputFormat}/index.html` }],

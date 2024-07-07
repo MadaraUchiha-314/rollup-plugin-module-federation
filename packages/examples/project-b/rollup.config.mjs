@@ -19,7 +19,7 @@ const config = ({ outputFormat }) => ({
       'process.env.NODE_ENV': JSON.stringify('production'),
       preventAssignment: true,
     }),
-    federation(federationconfig('rollup')),
+    federation(federationconfig('rollup', outputFormat)),
     nodeResolve({
       browser: true,
     }),

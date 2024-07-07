@@ -1,8 +1,9 @@
-export const federationconfig = () => ({
+export const federationconfig = (bundler, outputFormat) => ({
   name: 'sample_project_b',
   filename: 'my-remote-entry.js',
   exposes: {
-    './button': './src/index.js',
+    './button': './src/button.js',
+    './link': './src/link.js',
   },
   shared: {
     react: {
@@ -10,4 +11,13 @@ export const federationconfig = () => ({
     },
     axios: {},
   },
+  library: {
+    type: outputFormat === 'esm' ? 'module' : outputFormat,
+  },
+  ...(bundler === 'rollup' || bundler === 'rspack'
+    ? {
+      manifest: true,
+      getPublicPath: `return window.location.origin + '/packages/examples/project-b/dist/${bundler}/${outputFormat}/';`,
+    }
+    : {}),
 });

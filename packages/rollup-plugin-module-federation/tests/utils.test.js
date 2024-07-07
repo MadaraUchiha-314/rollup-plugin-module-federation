@@ -65,7 +65,7 @@ describe('utils.ts', () => {
   });
 
   test('getFileNameFromChunkName creates file path from chunk name', () => {
-    expect(getFileNameFromChunkName('chunk-name')).toBe('./chunk-name.js');
+    expect(getFileNameFromChunkName('chunk-name')).toBe('chunk-name.js');
   });
 });
 
@@ -394,7 +394,7 @@ describe('getInitConfig', () => {
       name: 'testName',
       shared: {
         sharedPkg1: {
-          version: undefined,
+          version: null,
           shareConfig: {
             singleton: undefined,
             requiredVersion: '1.0.0',
@@ -402,9 +402,10 @@ describe('getInitConfig', () => {
           },
           scope: undefined,
           lib: expect.any(Function),
+          strategy: 'version-first',
         },
         sharedPkg2: {
-          version: undefined,
+          version: null,
           strategy: 'loaded-first',
           shareConfig: {
             singleton: undefined,
