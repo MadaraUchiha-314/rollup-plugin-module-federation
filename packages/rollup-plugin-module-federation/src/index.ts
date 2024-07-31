@@ -62,6 +62,7 @@ const REMOTE_ENTRY_FILE_NAME: string = `${REMOTE_ENTRY_MODULE_ID}.js`;
  * All imports to shared/exposed/remotes will get converted to this expression.
  */
 const FEDERATED_IMPORT_EXPR: string = 'loadShare';
+const FEDERATED_EAGER_IMPORT_EXPR: string = 'loadShareSync';
 const FEDERATED_IMPORT_FROM_REMOTE: string = 'loadRemote';
 const FEDERATED_EAGER_SHARED: string = '__federated__shared__eager__';
 
@@ -75,7 +76,8 @@ export function getFederatedImportStatementForNode(
   {
     importStmt,
     entityToImport,
-  }: { importStmt: string; entityToImport: string },
+    isAsync,
+  }: { importStmt: string; entityToImport: string, isAsync: boolean },
   federatedModuleType: FederatedModuleType,
 ): string {
   const federatedImportStms: Array<string> = [];
@@ -85,7 +87,7 @@ export function getFederatedImportStatementForNode(
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
   const moduleSpecifier = `${importStmt}('${entityToImport}')`;
-  const getModuleOrFactoryAsync = `await ${moduleSpecifier}`;
+  const getModuleOrFactoryAsync = isAsync ? `await ${moduleSpecifier}`: moduleSpecifier;
   /**
    * loadRemote directly returns the module, while loadShare returns a factory which returns the module.
    */
@@ -529,8 +531,8 @@ export default function federation(
          */
         remoteEntryCode.append(
           `
-          const init = async (sharedScope) => {
-            const instance = await initModuleFederationRuntime({
+          const init = (sharedScope) => {
+            const instance = initModuleFederationRuntime({
               name: '${initConfig.name}',
               plugins: [
                 ${(
@@ -571,7 +573,7 @@ export default function federation(
                                * TODO: Convert this to a lib and re-write eager shared imports to loadShareSync()
                                */
                               sharedConfigForPkg.shareConfig?.eager
-                              ? `get: () => Promise.resolve(${FEDERATED_EAGER_SHARED}${moduleNameOrPath}).then((module) => () => module),`
+                              ? `lib: () => ${FEDERATED_EAGER_SHARED}${moduleNameOrPath},`
                               : `get: () => import('${moduleNameOrPath}').then((module) => () => module),`
                           }
                         },
@@ -681,12 +683,14 @@ export default function federation(
                     resolvedModulePath
                   ] as SharedOrExposedModuleInfo
                 ).moduleNameOrPath;
+                const isEager = (federatedModuleInfo[resolvedModulePath] as SharedOrExposedModuleInfo).versionInfo.eager;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
                     {
-                      importStmt: FEDERATED_IMPORT_EXPR,
+                      importStmt: isEager? FEDERATED_EAGER_IMPORT_EXPR: FEDERATED_IMPORT_EXPR,
                       entityToImport: chunkName,
+                      isAsync: !isEager,
                     },
                     'shared',
                   );
@@ -726,6 +730,7 @@ export default function federation(
                       importStmt: FEDERATED_IMPORT_FROM_REMOTE,
                       // @ts-ignore
                       entityToImport: node?.source?.value,
+                      isAsync: true,
                     },
                     'remote',
                   );
@@ -747,7 +752,7 @@ export default function federation(
             /**
              * Import from @module-federation/runtime
              */
-            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '@module-federation/runtime';${EOL}
+            import { ${FEDERATED_IMPORT_EXPR}, ${FEDERATED_EAGER_IMPORT_EXPR}, ${FEDERATED_IMPORT_FROM_REMOTE} } from '@module-federation/runtime';${EOL}
           `);
         }
         return {
