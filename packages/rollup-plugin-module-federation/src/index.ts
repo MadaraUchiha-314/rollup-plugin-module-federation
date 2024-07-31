@@ -76,7 +76,7 @@ export function getFederatedImportStatementForNode(
   {
     importStmt,
     entityToImport,
-    isAsync,
+    isAsync = true,
   }: { importStmt: string; entityToImport: string; isAsync: boolean },
   federatedModuleType: FederatedModuleType,
 ): string {

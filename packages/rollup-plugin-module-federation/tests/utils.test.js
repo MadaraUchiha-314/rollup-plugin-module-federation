@@ -401,7 +401,6 @@ describe('getInitConfig', () => {
             eager: undefined,
           },
           scope: undefined,
-          lib: expect.any(Function),
           strategy: 'version-first',
         },
         sharedPkg2: {
@@ -413,7 +412,6 @@ describe('getInitConfig', () => {
             eager: undefined,
           },
           scope: undefined,
-          lib: expect.any(Function),
         },
       },
       plugins: [],
