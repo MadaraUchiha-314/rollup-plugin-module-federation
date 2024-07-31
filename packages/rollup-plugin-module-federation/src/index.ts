@@ -77,7 +77,7 @@ export function getFederatedImportStatementForNode(
     importStmt,
     entityToImport,
     isAsync,
-  }: { importStmt: string; entityToImport: string, isAsync: boolean },
+  }: { importStmt: string; entityToImport: string; isAsync: boolean },
   federatedModuleType: FederatedModuleType,
 ): string {
   const federatedImportStms: Array<string> = [];
@@ -87,7 +87,9 @@ export function getFederatedImportStatementForNode(
    * ES2015 Module spec: https://github.com/estree/estree/blob/master/es2015.md#modules
    */
   const moduleSpecifier = `${importStmt}('${entityToImport}')`;
-  const getModuleOrFactoryAsync = isAsync ? `await ${moduleSpecifier}`: moduleSpecifier;
+  const getModuleOrFactoryAsync = isAsync
+    ? `await ${moduleSpecifier}`
+    : moduleSpecifier;
   /**
    * loadRemote directly returns the module, while loadShare returns a factory which returns the module.
    */
@@ -683,12 +685,18 @@ export default function federation(
                     resolvedModulePath
                   ] as SharedOrExposedModuleInfo
                 ).moduleNameOrPath;
-                const isEager = (federatedModuleInfo[resolvedModulePath] as SharedOrExposedModuleInfo).versionInfo.eager;
+                const isEager = (
+                  federatedModuleInfo[
+                    resolvedModulePath
+                  ] as SharedOrExposedModuleInfo
+                ).versionInfo.eager;
                 const federatedImportStmsStr =
                   getFederatedImportStatementForNode(
                     node as NodesToRewrite,
                     {
-                      importStmt: isEager? FEDERATED_EAGER_IMPORT_EXPR: FEDERATED_IMPORT_EXPR,
+                      importStmt: isEager
+                        ? FEDERATED_EAGER_IMPORT_EXPR
+                        : FEDERATED_IMPORT_EXPR,
                       entityToImport: chunkName,
                       isAsync: !isEager,
                     },
