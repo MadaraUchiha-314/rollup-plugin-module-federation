@@ -48,7 +48,7 @@ const IMPORTS_TO_FEDERATED_IMPORTS_NODES = {
   /**
    * TODO: Fix the bug before uncommenting: https://github.com/MadaraUchiha-314/rollup-plugin-module-federation/issues/16
    */
-  /* ExportNamedDeclaration: 'ExportNamedDeclaration', */
+  ExportNamedDeclaration: 'ExportNamedDeclaration',
   /**
    * TODO: Rollup has to first fix the bug before we can work on this: https://github.com/rollup/rollup/issues/5221
    */
