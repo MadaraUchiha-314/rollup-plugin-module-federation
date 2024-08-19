@@ -10,6 +10,7 @@ const config = ({ outputFormat }) => ({
   },
   output: {
     dir: `dist/${outputFormat}`,
+    entryFileNames: `[name].${outputFormat === 'esm' ? 'mjs' : 'cjs'}`,
     format: outputFormat,
   },
   plugins: [
