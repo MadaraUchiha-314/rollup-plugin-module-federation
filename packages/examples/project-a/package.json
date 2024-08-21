@@ -10,8 +10,9 @@
     "build:webpack": "webpack",
     "build:rollup": "rollup --config rollup.config.mjs",
     "build:rspack": "rspack build",
+    "build:vite": "vite build --profile",
     "clean": "rm -rf dist/",
-    "build": "npm run clean && npm run build:webpack && npm run build:rspack && npm run build:rollup",
+    "build": "npm run clean && npm run build:vite && npm run build:webpack && npm run build:rspack && npm run build:rollup",
     "release": "",
     "test:integration": "npx playwright test"
   },
@@ -22,6 +23,7 @@
     "uuid": "9.0.0"
   },
   "devDependencies": {
+    "vite-plugin-inspect": "0.8.4",
     "@originjs/vite-plugin-federation": "1.2.3",
     "@playwright/test": "^1.41.2",
     "@rollup/plugin-commonjs": "25.0.3",
