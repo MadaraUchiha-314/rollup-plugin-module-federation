@@ -64,7 +64,7 @@
     "@module-federation/runtime": "0.8.0",
     "@module-federation/sdk": "0.2.4",
     "estree-walker": "3.0.3",
-    "magic-string": "0.30.1",
+    "magic-string": "0.30.15",
     "semver": "7.5.4"
   },
   "devDependencies": {
