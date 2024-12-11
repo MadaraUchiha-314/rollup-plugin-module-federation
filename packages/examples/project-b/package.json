@@ -19,7 +19,7 @@
     "react": "^18.0.0"
   },
   "devDependencies": {
-    "@module-federation/enhanced": "0.2.4",
+    "@module-federation/enhanced": "0.8.2",
     "@originjs/vite-plugin-federation": "1.2.3",
     "@rollup/plugin-commonjs": "25.0.3",
     "@rollup/plugin-json": "6.0.1",
