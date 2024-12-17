@@ -38,7 +38,7 @@
     "webpack": "5.84.1",
     "webpack-cli": "5.1.1",
     "@rspack/cli": "0.7.5",
-    "@rspack/core": "1.0.0",
+    "@rspack/core": "1.1.6",
     "@module-federation/enhanced": "0.8.4"
   },
   "resolutions": {
